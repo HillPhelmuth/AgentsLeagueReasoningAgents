@@ -1,0 +1,72 @@
+<section class="study-panel">
+    <h3>Study Plan</h3>
+
+    @if (Output is null)
+    {
+        <p class="empty-state">No study plan generated yet.</p>
+    }
+    else
+    {
+        <div class="summary-grid">
+            <p><strong>Plan:</strong> @Output.PlanTitle</p>
+            <p><strong>Duration:</strong> @Output.DurationWeeks weeks</p>
+            <p><strong>Weekly Hours:</strong> @Output.WeeklyHours</p>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Output.Rationale))
+        {
+            <p class="panel-rationale">@Output.Rationale</p>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Output.BriefMessageToUser))
+        {
+            <p>@Output.BriefMessageToUser</p>
+        }
+
+        <div class="milestones">
+            @if (Output.WeeklyMilestones.Count == 0)
+            {
+                <p class="empty-state">No weekly milestones available.</p>
+            }
+            else
+            {
+                @foreach (var week in Output.WeeklyMilestones.OrderBy(m => m.WeekNumber))
+                {
+                    <article class="week-card">
+                        <h4>Week @week.WeekNumber</h4>
+                        <p><strong>Objective:</strong> @week.Objective</p>
+                        <p><strong>Checkpoint:</strong> @week.Checkpoint</p>
+
+                        @if (week.Sessions.Count > 0)
+                        {
+                            <ul class="session-list">
+                                @foreach (var session in week.Sessions)
+                                {
+                                    <li>
+                                        <p><strong>@session.Day</strong> · @session.DurationMinutes min</p>
+                                        @if (session.Tasks.Count > 0)
+                                        {
+                                            <ul class="task-list">
+                                                @foreach (var task in session.Tasks)
+                                                {
+                                                    <li>@task</li>
+                                                }
+                                            </ul>
+                                        }
+                                        <p><strong>Resources:</strong></p>
+                                        <ul>
+                                            @foreach (var url in session.Urls)
+                                            {
+                                                <li><a target="_blank" href="@url">@url</a></li>
+                                            }
+                                        </ul> 
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </article>
+                }
+            }
+        </div>
+    }
+</section>

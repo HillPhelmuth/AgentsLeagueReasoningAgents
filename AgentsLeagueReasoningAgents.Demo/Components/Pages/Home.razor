@@ -1,0 +1,87 @@
+﻿@page "/"
+@using AgentsLeagueReasoningAgents.Workflows
+@using AgentsLeagueReasoningAgents.Demo.Components.StudyHelpDisplay
+@inject IPreparationWorkflowService PreparationWorkflowService
+
+<PageTitle>Home</PageTitle>
+<h1>@tempString</h1>
+<section class="home-shell">
+	<header class="hero-card">
+		<p class="hero-kicker">Agents League</p>
+		<h1>Certification Prep Workflow</h1>
+		<p class="hero-subtitle">Run the preparation pipeline (curator → study planner → engagement) and turn goals into a concrete exam-ready plan.</p>
+	</header>
+
+	<section class="control-card">
+		<div class="field-group">
+			<label for="topics">Topics</label>
+			<textarea id="topics" class="text-input text-area" @bind="Topics" rows="5" placeholder="Ex: Azure Functions, APIM, secure networking, monitoring"></textarea>
+		</div>
+
+		
+
+        <div class="field-grid">
+            <div class="field-group">
+                <label for="student-email">Student email</label>
+                <input id="student-email" class="text-input" @bind="StudentEmail" placeholder="student@example.com" />
+            </div>
+            <div class="field-group">
+                <label for="weekly-hours">Weekly hours</label>
+                <input id="weekly-hours" type="number" class="text-input" @bind="WeeklyHours" min="1" max="40"/>
+            </div>
+            <div class="field-group">
+                <label for="duration-weeks">Duration (weeks)</label>
+                <input id="duration-weeks" type="number" class="text-input" @bind="DurationWeeks" min="1" max="52"/>
+            </div>
+        </div>
+        <div class="field-group">
+            <label>
+                <input type="checkbox" @bind="UseSingleAgent"/>
+                Use Single Agent
+            </label>
+        </div>
+
+		<div class="action-row">
+			<button class="action-button primary" @onclick="RunWorkflowAsync" disabled="@IsRunning">@(IsRunning ? "Running Workflow..." : "Run Preparation Workflow")</button>
+			<button class="action-button secondary" @onclick="LoadSavedPreparationAsync" disabled="@IsRunning">Load Saved Preparation</button>
+		</div>
+	</section>
+
+	@if (!string.IsNullOrWhiteSpace(ErrorMessage))
+	{
+		<div class="status-callout error">@ErrorMessage</div>
+	}
+
+	@if (Result is not null)
+	{
+		<section class="results-shell">
+			<div class="results-header">
+				<h2>Preparation Output</h2>
+				<button class="action-button success" @onclick="GoToAssessment">I'm Ready for Assessment</button>
+			</div>
+
+			<details class="result-card">
+				<summary>Learning Path (click to expand)</summary>
+				<LearningPath Output="Result.CuratedLearningPathStructured" />
+			</details>
+
+			<details class="result-card">
+				<summary>Study Plan (click to expand)</summary>
+				<StudyPlan Output="Result.StudyPlanStructured" />
+			</details>
+
+			<details class="result-card">
+				<summary>Engagement Plan (click to expand)</summary>
+				<Engagement Output="Result.EngagementPlanStructured" />
+			</details>
+
+			@if (!string.IsNullOrWhiteSpace(Result.WorkflowTranscript))
+			{
+				<details class="result-card transcript-card">
+					<summary>Workflow Transcript (click to expand)</summary>
+					<div>@((MarkupString)MarkdownToHtml(Result.WorkflowTranscript))</div>
+				</details>
+			}
+		</section>
+	}
+</section>

@@ -1,0 +1,49 @@
+.study-panel {
+    display: grid;
+    gap: 1rem;
+}
+
+.study-panel h3,
+.study-panel h4,
+.study-panel p {
+    margin: 0;
+}
+
+.summary-grid {
+    display: grid;
+    gap: 0.4rem;
+}
+
+.milestones {
+    display: grid;
+    gap: 0.9rem;
+}
+
+.week-card {
+    display: grid;
+    gap: 0.5rem;
+    border: 1px solid;
+    border-radius: 10px;
+    padding: 0.75rem;
+}
+
+.session-list,
+.task-list {
+    margin: 0;
+    padding-left: 1.2rem;
+    display: grid;
+    gap: 0.45rem;
+}
+
+.empty-state,
+.panel-rationale {
+    margin: 0;
+}
+a {
+    color: #b6ff00;
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
+    color:#58ff00
+}

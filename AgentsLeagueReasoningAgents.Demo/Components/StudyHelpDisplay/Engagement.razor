@@ -1,0 +1,56 @@
+<section class="study-panel">
+    <h3>Engagement Plan</h3>
+
+    @if (Output is null)
+    {
+        <p class="empty-state">No engagement plan generated yet.</p>
+    }
+    else
+    {
+        <div class="summary-grid">
+            <p><strong>Recipient:</strong> @Output.RecipientEmail</p>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Output.Rationale))
+        {
+            <p class="panel-rationale">@Output.Rationale</p>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Output.BriefMessageToUser))
+        {
+            <p>@Output.BriefMessageToUser</p>
+        }
+
+        @if (CalendarDays.Count == 0)
+        {
+            <p class="empty-state">No reminders or motivation messages scheduled.</p>
+        }
+        else
+        {
+            <div class="calendar-grid">
+                @foreach (var day in CalendarDays)
+                {
+                    <article class="calendar-day">
+                        <header>
+                            <h4>@day.Date.ToString("ddd, MMM d")</h4>
+                        </header>
+
+                        <ul class="event-list">
+                            @foreach (var entry in day.Entries)
+                            {
+                                <li>
+                                    <p><strong>@entry.TimeLabel</strong> · @entry.Kind</p>
+                                    @if (!string.IsNullOrWhiteSpace(entry.Subject))
+                                    {
+                                        <p>@entry.Subject</p>
+                                    }
+                                    <p>@entry.Body</p>
+                                </li>
+                            }
+                        </ul>
+                    </article>
+                }
+            </div>
+        }
+    }
+</section>

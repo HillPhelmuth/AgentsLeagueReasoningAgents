@@ -1,0 +1,85 @@
+<section class="study-panel">
+    <h3>Curated Learning Path</h3>
+
+    @if (Output is null)
+    {
+        <p class="empty-state">No learning path generated yet.</p>
+    }
+    else
+    {
+        @if (!string.IsNullOrWhiteSpace(Output.Rationale))
+        {
+            <p class="panel-rationale">@Output.Rationale</p>
+        }
+
+        <div class="section-block">
+            <h4>Learning Paths</h4>
+            @if (Output.LearningPaths.Count == 0)
+            {
+                <p class="empty-state">No learning paths available.</p>
+            }
+            else
+            {
+                <ul class="item-list">
+                    @foreach (var item in Output.LearningPaths)
+                    {
+                        <li>
+                            <a href="@item.Url" target="_blank" rel="noopener noreferrer">@item.Title</a>
+                            <span class="meta">@item.EstimatedHours h</span>
+                            @if (!string.IsNullOrWhiteSpace(item.Relevance))
+                            {
+                                <p>@item.Relevance</p>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+
+        <div class="section-block">
+            <h4>Modules</h4>
+            @if (Output.Modules.Count == 0)
+            {
+                <p class="empty-state">No module recommendations available.</p>
+            }
+            else
+            {
+                <ul class="item-list">
+                    @foreach (var module in Output.Modules)
+                    {
+                        <li>
+                            <a href="@module.Url" target="_blank" rel="noopener noreferrer">@module.Title</a>
+                            @if (!string.IsNullOrWhiteSpace(module.SkillFocus))
+                            {
+                                <p>@module.SkillFocus</p>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+
+        <div class="section-block">
+            <h4>Certification Targets</h4>
+            @if (Output.Targets.Count == 0)
+            {
+                <p class="empty-state">No certification targets available.</p>
+            }
+            else
+            {
+                <ul class="item-list">
+                    @foreach (var target in Output.Targets)
+                    {
+                        <li>
+                            <a href="@target.Url" target="_blank" rel="noopener noreferrer">@target.Title</a>
+                            @if (!string.IsNullOrWhiteSpace(target.Type))
+                            {
+                                <span class="meta">@target.Type</span>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+</section>

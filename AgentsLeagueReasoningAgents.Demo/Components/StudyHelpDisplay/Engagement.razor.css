@@ -1,0 +1,54 @@
+.study-panel {
+    display: grid;
+    gap: 1rem;
+}
+
+.study-panel h3,
+.study-panel h4,
+.study-panel p {
+    margin: 0;
+}
+
+.summary-grid {
+    display: grid;
+    gap: 0.4rem;
+}
+
+.calendar-grid {
+    display: grid;
+    gap: 0.8rem;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.calendar-day {
+    border: 1px solid;
+    border-radius: 10px;
+    padding: 0.75rem;
+    display: grid;
+    gap: 0.65rem;
+}
+.event-list li {
+    overflow-wrap: anywhere; /* modern standard */
+    word-break: break-word; /* fallback support */
+    white-space: normal; /* allow wrapping */
+}
+
+    
+    
+
+.event-list {
+    margin: 0;
+    padding-left: 1.1rem;
+    display: grid;
+    gap: 0.7rem;
+}
+
+.event-list li {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.empty-state,
+.panel-rationale {
+    margin: 0;
+}

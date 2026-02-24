@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+		<UserSecretsId>1a0fce3a-9f4c-465d-a16d-4005dee44d3b</UserSecretsId>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\AgentsLeagueReasoningAgents.Evals\AgentsLeagueReasoningAgents.Evals.csproj" />
+	  <ProjectReference Include="..\AgentsLeagueReasoningAgents\AgentsLeagueReasoningAgents.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Components\StudyHelpDisplay\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  
+	  <PackageReference Include="Markdig" Version="0.45.0" />
+	  
+	  <PackageReference Include="Microsoft.EntityFrameworkCore.Cosmos" Version="10.0.0" />
+	</ItemGroup>
+
+</Project>

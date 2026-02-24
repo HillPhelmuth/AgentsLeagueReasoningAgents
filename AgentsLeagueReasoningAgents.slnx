@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="AgentsLeagueReasoningAgents.Demo/AgentsLeagueReasoningAgents.Demo.csproj" />
+  <Project Path="AgentsLeagueReasoningAgents.EmailFunction/AgentsLeagueReasoningAgents.EmailFunction.csproj" Id="4183c2dd-4e9b-4767-ba1e-3812a5ddabc9" />
+  <Project Path="AgentsLeagueReasoningAgents.Evals/AgentsLeagueReasoningAgents.Evals.csproj" Id="9feea07d-fc7f-44c4-8241-7b20687ee98a" />
+  <Project Path="AgentsLeagueReasoningAgents/AgentsLeagueReasoningAgents.csproj" />
+  <Project Path="MSLearnPlatformClient/MSLearnPlatformClient.csproj" />
+</Solution>

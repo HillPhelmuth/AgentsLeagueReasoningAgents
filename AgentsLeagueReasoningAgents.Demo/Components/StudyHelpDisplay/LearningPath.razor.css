@@ -1,0 +1,36 @@
+.study-panel {
+    display: grid;
+    gap: 1rem;
+}
+
+.study-panel h3,
+.study-panel h4 {
+    margin: 0;
+}
+
+.section-block {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.item-list {
+    margin: 0;
+    padding-left: 1.25rem;
+    display: grid;
+    gap: 0.75rem;
+}
+
+.item-list li {
+    display: grid;
+    gap: 0.2rem;
+}
+
+.item-list p,
+.panel-rationale,
+.empty-state {
+    margin: 0;
+}
+
+.meta {
+    font-size: 0.875rem;
+}

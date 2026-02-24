@@ -1,0 +1,20 @@
+{
+  "dependencies": {
+    "cosmosdb1": {
+      "containerPorts": "8081:8081,10251:10251,10252:10252,10253:10253,10254:10254",
+      "secretStore": "LocalSecretsFile",
+      "containerName": "cert-learn-db",
+      "containerImage": "mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator",
+      "type": "cosmosdb.container",
+      "connectionId": "ConnectionStrings:CosmosDBConnection"
+    },
+    "cosmosdb2": {
+      "serviceConnectorResourceId": "/subscriptions/[parameters('subscriptionId')]/resourceGroups/[parameters('serviceConnectorResourceGroupName')]/providers/Microsoft.ServiceLinker/locations/eastus2/connectors/ConnectionStringsReminderDb_7A9E338C72",
+      "secretStore": "LocalSecretsFile",
+      "resourceId": "/subscriptions/[parameters('subscriptionId')]/resourceGroups/[parameters('resourceGroupName')]/providers/Microsoft.DocumentDB/databaseAccounts/agents-league-db",
+      "type": "cosmosdb.azure",
+      "connectionId": "ConnectionStrings:ReminderDb",
+      "dynamicId": null
+    }
+  }
+}
