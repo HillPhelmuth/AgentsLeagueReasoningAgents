@@ -1,6 +1,8 @@
 using AgentsLeagueReasoningAgents.Models;
 using AgentsLeagueReasoningAgents.Options;
 using AgentsLeagueReasoningAgents.Tools;
+using AgentsLeagueReasoningAgents.Tools.Optional;
+using AgentsLeagueReasoningAgents.Tools.Required;
 using AgentsLeagueReasoningAgents.Workflows;
 using Azure;
 using Azure.AI.OpenAI;
@@ -24,6 +26,7 @@ public interface IPreparationAgentFactory
 
     Task<AIAgent> CreateReadinessAssessmentAgentAsync(CancellationToken cancellationToken = default);
     Task<AIAgent> CreateFullWorkflowAgentAsync(CancellationToken cancellationToken = default);
+    event Action<string, string, object>? AgentInvokedTool;
 }
 
 public sealed class PreparationAgentFactory(
@@ -43,19 +46,24 @@ public sealed class PreparationAgentFactory(
     ILogger<PreparationAgentFactory> logger,
     ILoggerFactory loggerFactory, IConfiguration configuration) : IPreparationAgentFactory
 {
+    public event Action<string, string, object>? AgentInvokedTool;
     public async Task<AIAgent> CreateLearningPathCuratorAgentAsync(CancellationToken cancellationToken = default)
     {
         var learningPathTools = (await learnCatalogToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
             .Concat(await microsoftLearnMcpToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
-            //.Concat(await gitHubStudyNotesToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
-            //.Concat(await gitHubExamSyllabiToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
-            //.Concat(await youTubeStudyContentToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
-            //.Concat(await podcastFeedToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
-            //.Concat(await gitHubCommunityHubToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
-            //.Concat(await examTopicsToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
-            //.Concat(await officialLabExercisesToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
             .ToArray();
-
+        if (configuration["UseOptionalTools"] == "true")
+        {
+            learningPathTools = learningPathTools
+                .Concat(await gitHubStudyNotesToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
+                .Concat(await gitHubExamSyllabiToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
+                .Concat(await youTubeStudyContentToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
+                .Concat(await podcastFeedToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
+                .Concat(await gitHubCommunityHubToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
+                .Concat(await examTopicsToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
+                .Concat(await officialLabExercisesToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
+                .ToArray();
+        }
         return CreateBaseAgent<LearningPathCurationOutput>(
             name: "learning-path-curator",
             instructions: CuratorInstructions,
@@ -66,12 +74,16 @@ public sealed class PreparationAgentFactory(
     {
        var studyPlanTools = (await learnCatalogToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
             .Concat(await microsoftLearnMcpToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
-            //.Concat(await gitHubStudyNotesToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
-            //.Concat(await gitHubExamSyllabiToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
-            //.Concat(await gitHubCommunityHubToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
-            //.Concat(await officialLabExercisesToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
             .ToArray();
-
+        if (configuration["UseOptionalTools"] == "true")
+        {
+            studyPlanTools = studyPlanTools
+                .Concat(await gitHubStudyNotesToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
+                .Concat(await gitHubExamSyllabiToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
+                .Concat(await gitHubCommunityHubToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
+                .Concat(await officialLabExercisesToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
+                .ToArray();
+        }
         return CreateBaseAgent<StudyPlanOutput>(
             name: "study-plan-generator",
             instructions: StudyPlannerInstructions,
@@ -82,6 +94,18 @@ public sealed class PreparationAgentFactory(
     {
         var workflowTools = (await learnCatalogToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
             .Concat(await microsoftLearnMcpToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false));
+        if (configuration["UseOptionalTools"] == "true")
+        {
+            workflowTools = workflowTools
+                .Concat(await gitHubStudyNotesToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
+                .Concat(await gitHubExamSyllabiToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
+                .Concat(await youTubeStudyContentToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
+                .Concat(await podcastFeedToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
+                .Concat(await gitHubCommunityHubToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
+                .Concat(await examTopicsToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
+                .Concat(await officialLabExercisesToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
+                .ToArray();
+        }
         return CreateBaseAgent<PreparationWorkflowResult>("full-workflow-agent", FullWorkflowAgentInstructions, workflowTools.ToArray());
     }
 
@@ -101,12 +125,16 @@ public sealed class PreparationAgentFactory(
     private async Task<AIAgent> CreateReadinessAssessmentAgentCoreAsync(CancellationToken cancellationToken)
     {
         var tools = (await microsoftLearnMcpToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
-            //.Concat(await gitHubPracticeQuestionsToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
-            //.Concat(await gitHubAnkiDeckToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
-            //.Concat(await stackExchangeToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
-            //.Concat(await youTubeStudyContentToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
             .ToArray();
-
+        if (configuration["UseOptionalTools"] == "true")
+        {
+            tools = tools
+                .Concat(await gitHubPracticeQuestionsToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
+                .Concat(await gitHubAnkiDeckToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
+                .Concat(await stackExchangeToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
+                .Concat(await youTubeStudyContentToolset.GetToolsAsync(cancellationToken).ConfigureAwait(false))
+                .ToArray();
+        }
         return CreateBaseAgent<AssessmentQuestionSetOutput>(
             name: "readiness-assessment-agent",
             instructions: ReadinessAssessmentInstructions,

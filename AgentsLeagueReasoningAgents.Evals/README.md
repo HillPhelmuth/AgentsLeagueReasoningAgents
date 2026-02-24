@@ -67,6 +67,25 @@ dotnet run --project .\AgentsLeagueReasoningAgents.Evals\AgentsLeagueReasoningAg
 - `--agent <name>` filter by agent (repeatable)
 - `--dataset-file <path>` evaluate only specific JSONL file (repeatable)
 
+### Comparative full-workflow evals
+
+Use the paired dataset in `Datasets/full-workflow/preparation-workflow.comparative.explain.jsonl` to compare:
+
+- `preparation-workflow-multi-agent` (calls `RunPreparationAsync`)
+- `preparation-workflow-single-agent` (calls `RunSingleAgentPreparationAsync`)
+
+Example run for only comparative workflow cases:
+
+```powershell
+dotnet run --project .\AgentsLeagueReasoningAgents.Evals\AgentsLeagueReasoningAgents.Evals.csproj -- --dataset-file .\AgentsLeagueReasoningAgents.Evals\Datasets\full-workflow\preparation-workflow.comparative.explain.jsonl
+```
+
+Example run with explicit agent split:
+
+```powershell
+dotnet run --project .\AgentsLeagueReasoningAgents.Evals\AgentsLeagueReasoningAgents.Evals.csproj -- --dataset-file .\AgentsLeagueReasoningAgents.Evals\Datasets\full-workflow\preparation-workflow.comparative.explain.jsonl --agent preparation-workflow-multi-agent --agent preparation-workflow-single-agent
+```
+
 Example smoke run:
 
 ```powershell

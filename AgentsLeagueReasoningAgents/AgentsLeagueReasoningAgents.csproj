@@ -29,8 +29,4 @@
 	  <ProjectReference Include="..\MSLearnPlatformClient\MSLearnPlatformClient.csproj" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <Folder Include="Tools\" />
-	</ItemGroup>
-
 </Project>

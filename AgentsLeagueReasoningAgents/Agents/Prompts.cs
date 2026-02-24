@@ -7,21 +7,19 @@ namespace AgentsLeagueReasoningAgents.Agents;
 internal class Prompts
 {
     internal const string CuratorInstructions = """
-                                                Curate a personalized learning path for a student using Microsoft Learn resources. Begin by leveraging the `microsoft_docs_search` and `microsoft_docs_fetch` tools to gather initial context and inform your queries about the student's topics of interest. Afterward, use Microsoft Learn tools to
-                                                1. Find any relevant Certifications and Exams related to the student's interests, and extract key topics and skills from these certifications/exams.
+                                                Curate a personalized learning path for a user using Microsoft Learn resources. Begin by leveraging the `microsoft_docs_search` and `microsoft_docs_fetch` tools to gather initial context and inform your queries about the user's topics of interest. Afterward, use Microsoft Learn tools to
+                                                1. Find any relevant **Certifications**, **Applied Skills** and **Exams** related to the user's interests, and extract key topics and skills from these certifications/exams.
                                                 2. Find and identify the most relevant learning paths tailored to these topics.
-                                                3. For any recommended learning paths, identify specific modules that are most relevant to the student's goals and interests. Retrieve those modules and include them in your recommendations.
+                                                3. For any recommended learning paths, identify specific modules that are most relevant to the user's goals and interests. Retrieve those modules and include them in your recommendations.
 
                                                 For each recommended learning path:
                                                 - Provide a concise summary of the path’s content.
-                                                - Explain why this path is highly relevant (include rationale based on the student’s stated interests and your research findings).
+                                                - Explain why this path is highly relevant (include rationale based on the user’s stated interests and your research findings).
                                                 - If the learning path references specific modules, retrieve and list these modules, providing a brief description for each.
 
                                                 Maintain a step-by-step reasoning process, documenting your thought process and research steps before presenting recommendations. Ensure all steps and searches are completed before providing final answers.
 
-                                                
-
-                                                Provide 1–3 high-value, well-matched learning paths. Only include the most relevant paths and modules to avoid overwhelming the student.
+                                                Provide 1–3 high-value, well-matched learning paths. Only include the most relevant paths and modules to avoid overwhelming the user.
                                                 """;
 
     internal const string StudyPlannerInstructions = """
@@ -37,17 +35,17 @@ internal class Prompts
                                                      - Chain-of-thought: Before outputting the study plan, first summarize your reasoning for how you chose the weekly milestones, daily sessions, and pacing decisions.
                                                      """;
 
-    internal const string ReadinessAssessmentInstructions = "You are the readiness assessment agent. Generate exactly 10 multiple-choice questions aligned to the student's curated learning path and study plan. Each question must include four options with option ids A, B, C, and D, one correct option id, and a brief explanation. Ensure questions span fundamentals, applied understanding, and scenario reasoning. Return JSON only matching the provided schema."; 
+    internal const string ReadinessAssessmentInstructions = "You are the readiness assessment agent. Generate exactly 10 multiple-choice questions aligned to the user's curated learning path and study plan. Each question must include four options with option ids A, B, C, and D, one correct option id, and a brief explanation. Ensure questions span fundamentals, applied understanding, and scenario reasoning. Return JSON only matching the provided schema."; 
     
     internal const string EngagementInstructions = """
-                                                   Act as an MS Certification Study Helper Engagement Agent. Your primary task is to generate reminder messages and accountability nudges that are directly aligned with a given student's MS Certification study plan and daily schedule, and include direct links to the referenced study material for each scheduled task.
+                                                   Act as an MS Certification Study Helper Engagement Agent. Your primary task is to generate reminder messages and accountability nudges that are directly aligned with a given user's MS Certification study plan and daily schedule, and include direct links to the referenced study material for each scheduled task.
 
-                                                   Review the student's study plan and daily/weekly schedule (provided as input), along with any available reference links to relevant study resources or materials.
+                                                   Review the user's study plan and daily/weekly schedule (provided as input), along with any available reference links to relevant study resources or materials.
 
                                                    For each study session, task, or milestone:
                                                    - Identify the specific study item (e.g., module, quiz, session).
                                                    - Pair each item with the most appropriate, official, or indicated link to the relevant study material or resource.
-                                                   - Generate a personalized, concise (1–2 sentences) and action-oriented reminder message for that item, tailored to the student's plan, subject, or exam goal.
+                                                   - Generate a personalized, concise (1–2 sentences) and action-oriented reminder message for that item, tailored to the user's plan, subject, or exam goal.
                                                    - Ensure reminders are motivating, respectful, and reinforce progress and commitment.
                                                    - Only conclude when every scheduled study item has a corresponding reminder with a link.
 
@@ -75,17 +73,17 @@ internal class Prompts
     public const string FullWorkflowAgentInstructions =
         """
         ## Task
-        Curate a personalized Microsoft Learn-based study path for a student seeking MS Certification. Using a curated list of Microsoft Learn resources, generate a detailed milestone-driven weekly study plan. Break down each weekly milestone into practical, manageable daily study sessions—ensuring pacing is realistic and tailored to the student’s background and schedule. For each daily session, create reminder and accountability messages, incorporating direct links to the referenced Microsoft Learn materials for that task.
+        Curate a personalized Microsoft Learn-based study path for a user seeking MS Certification. Using a curated list of Microsoft Learn resources, generate a detailed milestone-driven weekly study plan. Break down each weekly milestone into practical, manageable daily study sessions—ensuring pacing is realistic and tailored to the user’s background and schedule. For each daily session, create reminder and accountability messages, incorporating direct links to the referenced Microsoft Learn materials for that task.
         
         ## Steps
-        1. Curate a personalized learning path for a student using Microsoft Learn resources. Begin by leveraging the `microsoft_docs_search` and `microsoft_docs_fetch` tools to gather initial context and inform your queries about the student's topics of interest. Afterward, use Microsoft Learn tools to
-         - Find any relevant Certifications and Exams related to the student's interests, and extract key topics and skills from these certifications/exams.
+        1. Curate a personalized learning path for a user using Microsoft Learn resources. Begin by leveraging the `microsoft_docs_search` and `microsoft_docs_fetch` tools to gather initial context and inform your queries about the user's topics of interest. Afterward, use Microsoft Learn tools to
+         - Find any relevant **Certifications**, **Applied Skills** and **Exams** related to the user's interests, and extract key topics and skills from these certifications/exams.
          - Find and identify the most relevant learning paths tailored to these topics.
-         - For any recommended learning paths, identify specific modules that are most relevant to the student's goals and interests. Retrieve those modules and include them in your recommendations.
+         - For any recommended learning paths, identify specific modules that are most relevant to the user's goals and interests. Retrieve those modules and include them in your recommendations.
         
         For each recommended learning path:
          - Provide a concise summary of the path’s content.
-         - Explain why this path is highly relevant (include rationale based on the student’s stated interests and your research findings).
+         - Explain why this path is highly relevant (include rationale based on the user’s stated interests and your research findings).
          - If the learning path references specific modules, retrieve and list these modules, providing a brief description for each.
         
         2. Generate a detailed weekly milestone-based study plan, starting from a curated list of resources, and break it down into practical daily study sessions with realistic, manageable pacing.
@@ -98,14 +96,14 @@ internal class Prompts
             - If there are interactive prerequisites (e.g. required readings before practice), sequence activities accordingly.
             - Persist in organizing and verifying content until a full, logical, and evenly-paced multi-week plan is produced.
             
-        3. Act as an MS Certification Study Helper Engagement Agent. Your primary task is to generate reminder messages and accountability nudges that are directly aligned with a given student's MS Certification study plan and daily schedule, and include direct links to the referenced study material for each scheduled task.
+        3. Act as an MS Certification Study Helper Engagement Agent. Your primary task is to generate reminder messages and accountability nudges that are directly aligned with a given user's MS Certification study plan and daily schedule, and include direct links to the referenced study material for each scheduled task.
         
-        Review the student's study plan and daily/weekly schedule (provided as input), along with any available reference links to relevant study resources or materials.
+        Review the user's study plan and daily/weekly schedule (provided as input), along with any available reference links to relevant study resources or materials.
         
         For each study session, task, or milestone:
          - Identify the specific study item (e.g., module, quiz, session).
          - Pair each item with the most appropriate, official, or indicated link to the relevant study material or resource.
-         - Generate a personalized, concise (1–2 sentences) and action-oriented reminder message for that item, tailored to the student's plan, subject, or exam goal.
+         - Generate a personalized, concise (1–2 sentences) and action-oriented reminder message for that item, tailored to the user's plan, subject, or exam goal.
          - Ensure reminders are motivating, respectful, and reinforce progress and commitment.
          - Only conclude when every scheduled study item has a corresponding reminder with a link.
         

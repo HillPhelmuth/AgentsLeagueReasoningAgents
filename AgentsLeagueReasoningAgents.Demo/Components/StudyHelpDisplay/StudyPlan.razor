@@ -57,7 +57,9 @@
                                         <ul>
                                             @foreach (var url in session.Urls)
                                             {
-                                                <li><a target="_blank" href="@url">@url</a></li>
+                                                var parentUrl = url[..(url.LastIndexOf('/') + 1)];
+                                                var childName = url[(url.LastIndexOf('/')+1)..];
+                                                <li><a target="_blank" href="@parentUrl">@(string.IsNullOrWhiteSpace(childName) ? parentUrl : childName)</a></li>
                                             }
                                         </ul> 
                                     </li>

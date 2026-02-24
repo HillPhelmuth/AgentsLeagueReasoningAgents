@@ -17,6 +17,7 @@ public interface IPreparationWorkflowService
     event Action<string, object>? AgentResponseEmitted;
     Task<PreparationWorkflowResult> RunPreparationAsync(PreparationWorkflowRequest request, CancellationToken cancellationToken = default);
     Task<PreparationWorkflowResult?> RunSingleAgentPreparationAsync(PreparationWorkflowRequest request, CancellationToken cancellationToken = default);
+    event Action<string, string, object>? AgentToolInvoked;
 }
 
 public sealed class PreparationWorkflowService(
@@ -32,14 +33,15 @@ public sealed class PreparationWorkflowService(
     };
     private ILogger<PreparationWorkflowService> _logger = loggerFactory.CreateLogger<PreparationWorkflowService>();
     public event Action<string, object>? AgentResponseEmitted;
+    public event Action<string, string, object>? AgentToolInvoked;
 
-    private const string SeedOutputDir =
-        @"C:\Users\adamh\source\repos\AgentsLeagueReasoningAgents\AgentsLeagueReasoningAgents.Evals\Datasets\SeedSessions";
+    private static string _seedOutputDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "source", "repos", "AgentsLeagueReasoningAgents", "AgentsLeagueReasoningAgents.Evals", "Datasets", "SeedSessions");
     // This method demonstrates running the preparation workflow in a more traditional way, invoking each agent sequentially and
     // passing outputs between them. The RunPreparationWithWorkflowAsync method below shows how to run the same workflow using
     // the AgentWorkflowBuilder and InProcessExecution for better orchestration and potential parallelism.
     public async Task<PreparationWorkflowResult> RunPreparationAsync(PreparationWorkflowRequest request, CancellationToken cancellationToken = default)
     {
+        agentFactory.AgentInvokedTool += HandleAgentInvokedTool;
         var curator = await agentFactory.CreateLearningPathCuratorAgentAsync(cancellationToken).ConfigureAwait(false);
 
         var planner = await agentFactory.CreateStudyPlanGeneratorAgentAsync(cancellationToken).ConfigureAwait(false);
@@ -48,7 +50,7 @@ public sealed class PreparationWorkflowService(
 
         var curationPrompt = $"""
 
-                                       Student topics: {request.Topics}
+                                       Learning topics: {request.Topics}
                                        Weekly study hours: {request.WeeklyHours}
                                        Duration in weeks: {request.DurationWeeks}
 
@@ -67,7 +69,7 @@ public sealed class PreparationWorkflowService(
 
         var curatorserialized = await curator.SerializeSessionAsync(curatorSession);
 #if DEBUG
-        var outputPath = Path.Combine(SeedOutputDir, $"{curator.Name}", $"session_{Guid.NewGuid()}.json");
+        var outputPath = Path.Combine(_seedOutputDir, $"{curator.Name}", $"session_{Guid.NewGuid()}.json");
 
 #endif
         var curatedStructured = DeserializeOrDefault<LearningPathCurationOutput>(curatedLearningPath);
@@ -99,7 +101,7 @@ public sealed class PreparationWorkflowService(
         AgentResponseEmitted?.Invoke(curator.Name, curatedStructured);
         var planPrompt = $"""
 
-                           Student topics: {request.Topics}
+                           Learning topics: {request.Topics}
                            Weekly study hours: {request.WeeklyHours}
                            Duration in weeks: {request.DurationWeeks}
 
@@ -127,7 +129,7 @@ public sealed class PreparationWorkflowService(
         AgentResponseEmitted?.Invoke(planner.Name, studyPlanStructured);
         var engagementPrompt = $"""
 
-                             Student email: {request.StudentEmail}
+                             User email: {request.StudentEmail}
                              Today's date: {DateTime.Now:d}
                              Study plan:
                              {studyPlan}
@@ -177,29 +179,36 @@ public sealed class PreparationWorkflowService(
         };
 
         await stateStore.SavePreparationStateAsync(request.StudentEmail, result, cancellationToken).ConfigureAwait(false);
+        agentFactory.AgentInvokedTool -= HandleAgentInvokedTool;
         return result;
+    }
+
+    private void HandleAgentInvokedTool(string agent, string functionName, object parameters)
+    {
+        AgentToolInvoked?.Invoke(agent, functionName, parameters);
     }
 
     public async Task<PreparationWorkflowResult?> RunSingleAgentPreparationAsync(PreparationWorkflowRequest request, CancellationToken cancellationToken = default)
     {
+        agentFactory.AgentInvokedTool += HandleAgentInvokedTool;
         var agent = await agentFactory.CreateFullWorkflowAgentAsync(cancellationToken);
         var input = $"""
 
-             Student topics: {request.Topics}
+             Learning topics: {request.Topics}
              Weekly study hours: {request.WeeklyHours}
              Duration in weeks: {request.DurationWeeks}
-             Student email: {request.StudentEmail}
+             User email: {request.StudentEmail}
              Today's date: {DateTime.Now:d}
              Produce JSON only matching the provided schema
 
              """;
-        var session = await agent.CreateSessionAsync();
+        var session = await agent.CreateSessionAsync(cancellationToken);
         var response = await agent.RunAsync(input, session, cancellationToken:cancellationToken);
-        var sessionSerialized = await agent.SerializeSessionAsync(session);
+        var sessionSerialized = await agent.SerializeSessionAsync(session, cancellationToken: cancellationToken);
 
 
 #if DEBUG
-        var outputPath = Path.Combine(SeedOutputDir, $"{agent.Name}", $"session_{Guid.NewGuid()}.json");
+        var outputPath = Path.Combine(_seedOutputDir, $"{agent.Name}", $"session_{Guid.NewGuid()}.json");
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
         File.WriteAllText(outputPath, JsonSerializer.Serialize(sessionSerialized));
 #endif
@@ -208,8 +217,10 @@ public sealed class PreparationWorkflowService(
         {
             AgentResponseEmitted?.Invoke(agent.Name, parsedResponse);
             await PersistAndScheduleEngagementAsync(request.StudentEmail, parsedResponse.EngagementPlanStructured, cancellationToken).ConfigureAwait(false);
+            await stateStore.SavePreparationStateAsync(request.StudentEmail, parsedResponse, cancellationToken).ConfigureAwait(false);
         }
 
+        agentFactory.AgentInvokedTool -= HandleAgentInvokedTool;
         return parsedResponse;
 
     }

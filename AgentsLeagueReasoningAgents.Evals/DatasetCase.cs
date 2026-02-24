@@ -13,6 +13,9 @@ public sealed class DatasetCase
     [JsonPropertyName("agent_name")]
     public string AgentName { get; init; } = string.Empty;
 
+    [JsonPropertyName("workflow_mode")]
+    public string WorkflowMode { get; init; } = string.Empty;
+
     [JsonPropertyName("threshold_profile")]
     public string ThresholdProfile { get; init; } = string.Empty;
 

@@ -1,13 +1,12 @@
 using System.ComponentModel;
 using System.Text.Json;
 using AgentsLeagueReasoningAgents.Agents;
-using AgentsLeagueReasoningAgents.Models;
 using AgentsLeagueReasoningAgents.Options;
 using AgentsLeagueReasoningAgents.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 
-namespace AgentsLeagueReasoningAgents.Tools;
+namespace AgentsLeagueReasoningAgents.Tools.Optional;
 
 public class GitHubPracticeQuestionsToolset(
     GitHubContentService github,

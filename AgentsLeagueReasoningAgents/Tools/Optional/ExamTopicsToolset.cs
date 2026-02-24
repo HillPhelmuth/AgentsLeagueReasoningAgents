@@ -5,7 +5,7 @@ using AgentsLeagueReasoningAgents.Models;
 using AgentsLeagueReasoningAgents.Services;
 using Microsoft.Extensions.AI;
 
-namespace AgentsLeagueReasoningAgents.Tools;
+namespace AgentsLeagueReasoningAgents.Tools.Optional;
 
 public class ExamTopicsToolset(
     GitHubContentService github,

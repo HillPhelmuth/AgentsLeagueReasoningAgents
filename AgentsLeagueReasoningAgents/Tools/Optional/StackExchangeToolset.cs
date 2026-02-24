@@ -4,7 +4,7 @@ using AgentsLeagueReasoningAgents.Agents;
 using AgentsLeagueReasoningAgents.Services;
 using Microsoft.Extensions.AI;
 
-namespace AgentsLeagueReasoningAgents.Tools;
+namespace AgentsLeagueReasoningAgents.Tools.Optional;
 
 public class StackExchangeToolset(StackExchangeService stackExchange) : IAIToolset
 {

@@ -6,6 +6,8 @@ using AgentsLeagueReasoningAgents.Workflows;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
+using AgentsLeagueReasoningAgents.Tools.Optional;
+using AgentsLeagueReasoningAgents.Tools.Required;
 using MSLearnPlatformClient.Options;
 using MSLearnPlatformClient.Services;
 

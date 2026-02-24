@@ -7,7 +7,7 @@ using AgentsLeagueReasoningAgents.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 
-namespace AgentsLeagueReasoningAgents.Tools;
+namespace AgentsLeagueReasoningAgents.Tools.Optional;
 
 public class GitHubStudyNotesToolset(
     GitHubContentService github,

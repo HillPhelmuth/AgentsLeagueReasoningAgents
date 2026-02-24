@@ -10,7 +10,7 @@ using MSLearnPlatformClient.Abstractions;
 using MSLearnPlatformClient.Models.Catalog;
 using OpenAI;
 
-namespace AgentsLeagueReasoningAgents.Tools;
+namespace AgentsLeagueReasoningAgents.Tools.Required;
 
 public sealed class LearnCatalogToolset(ILearnCatalogClient learnCatalogClient, IConfiguration configuration) : IAIToolset
 {
@@ -53,10 +53,10 @@ public sealed class LearnCatalogToolset(ILearnCatalogClient learnCatalogClient, 
         return Task.FromResult(tools);
     }
 
-    [Description("Find Microsoft Learn learning paths relevant to one or more certification topics.")]
+    [Description("Find Microsoft Learn learning paths relevant to one or more certification/applied skills topics.")]
     public async Task<string> SearchLearningPathsAsync(
         [Description("MS learn certification subjects. include all that apply. If you're unsure, add it.")] LearnSubject[] subjects,
-        [Description("Applicable job roles for the subject matter.")] Role[] jobRoles,
+        [Description("Applicable job roles for the subject matter. Include *ALL* that may apply. If you're unsure, include it")] Role[] jobRoles,
         [Description("A description of the items that can be used to query the results to provide only the most relevant results.")] string query,
         [Description("Maximum number of learning paths to return.")] int maxResults = 5,
         CancellationToken cancellationToken = default)
@@ -107,7 +107,7 @@ public sealed class LearnCatalogToolset(ILearnCatalogClient learnCatalogClient, 
     [Description("Find Microsoft Learn modules for subjects or job roles. Use ONLY when you have no specific modules to get from `GetModules`")]
     public async Task<string> SearchModulesAsync(
         [Description("MS learn certification subjects, parsed from input. Include *ALL* that may apply. If you're unsure, include it")] LearnSubject[] subjects,
-        [Description("Applicable job roles for the subject matter.")] Role[] jobRoles,
+        [Description("Applicable job roles for the subject matter. Include *ALL* that may apply. If you're unsure, include it")] Role[] jobRoles,
         [Description("A description of the items that can be used to query the results to provide only the most relevant results.")] string query,
         [Description("Maximum number of modules to return.")] int maxResults = 100,
         CancellationToken cancellationToken = default)
@@ -144,14 +144,14 @@ public sealed class LearnCatalogToolset(ILearnCatalogClient learnCatalogClient, 
     [Description("Find relevant certifications and exams in Microsoft Learn catalog for a target area.")]
     public async Task<string> SearchCertificationsAndExamsAsync(
         [Description("MS learn certification subjects. Include *ALL* that may apply. If you're unsure, include it")] LearnSubject[] subjects,
-        [Description("Applicable job roles for the subject matter.")] Role[] jobRoles,
+        [Description("Applicable job roles for the subject matter. Include *ALL* that may apply. If you're unsure, include it")] Role[] jobRoles,
         [Description("A description of user needs that can be used to query the results to provide only the most relevant results.")] string query,
         [Description("Maximum records for each category.")] int maxResults = 50,
         CancellationToken cancellationToken = default)
     {
         var catalogQuery = new CatalogQuery
         {
-            Type = [CatalogItemType.Certification, CatalogItemType.Exam],
+            Type = [CatalogItemType.Certification, CatalogItemType.Exam, CatalogItemType.AppliedSkill],
             Subjects = subjects,
             Roles = jobRoles,
             MaxPageSize = Math.Clamp(maxResults, 90, 100)

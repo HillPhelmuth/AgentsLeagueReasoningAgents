@@ -75,9 +75,9 @@ public class CoursesAndLearnPathResponse
     [JsonPropertyName("learningPaths")]
     [Description("The most relevent learning paths to the query")]
     public List<LearningPathRecord> LearningPaths { get; set; } = [];
-    [JsonPropertyName("courses")]
-    [Description("The most relevent courses to the query")]
-    public List<AppliedSkillRecord> AppliedSkills { get; set; } = [];
+    //[JsonPropertyName("courses")]
+    //[Description("The most relevent courses to the query")]
+    //public List<AppliedSkillRecord> AppliedSkills { get; set; } = [];
 }
 public class ExamAndCertResponse
 {
@@ -89,4 +89,7 @@ public class ExamAndCertResponse
     [JsonPropertyName("certifications")]
     [Description("The certifications that may be applicable to the query")]
     public List<CertificationRecord> Certifications { get; set; } = [];
+    [JsonPropertyName("appliedSkills")]
+    [Description("The applied skills that may be applicable to the query")]
+    public List<AppliedSkillRecord> AppliedSkills { get; set; } = [];
 }

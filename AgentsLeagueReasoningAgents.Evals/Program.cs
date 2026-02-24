@@ -1,27 +1,43 @@
 using AgentsLeagueReasoningAgents.Agents;
 using AgentsLeagueReasoningAgents.DependencyInjection;
+using AgentsLeagueReasoningAgents.Evals;
+using AgentsLeagueReasoningAgents.Workflows;
 using Azure;
 using Azure.AI.OpenAI;
+using Azure.Messaging.ServiceBus;
 using HillPhelmuth.SemanticKernel.LlmAsJudgeEvals;
+using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
+using OpenAI;
 using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
-using AgentsLeagueReasoningAgents.Evals;
-using OpenAI;
+using System.Text.Json.Serialization;
 
 var options = RunnerOptions.Parse(args);
 var configuration = new ConfigurationBuilder()
-    .AddUserSecrets<Program>(optional: true).AddJsonFile("appsettings.json", optional: false)
+    .AddUserSecrets<Program>(optional: false).AddJsonFile("appsettings.json", optional: false)
     .Build();
 
 var serviceCollection = new ServiceCollection();
+var clientOptions = new CosmosClientOptions()
+{
+    UseSystemTextJsonSerializerWithOptions = new JsonSerializerOptions()
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    }
+};
+var cosmosClient = new CosmosClient(configuration["ConnectionStrings:ReminderDb"], clientOptions);
+serviceCollection.AddSingleton(cosmosClient);
+var serviceBusClient = new ServiceBusClient(configuration["ConnectionStrings:ServiceBus"]);
+serviceCollection.AddSingleton(serviceBusClient);
 serviceCollection.AddReasoningAgentsPreparation(configuration);
 serviceCollection.AddSingleton(configuration);
 var services = serviceCollection.BuildServiceProvider();
 var runnerConfig = RunnerConfig.FromConfig(configuration);
+//using var evalScope = services.CreateScope();
 
 if (!runnerConfig.IsValid)
 {
@@ -45,13 +61,14 @@ Console.CancelKeyPress += (_, eventArgs) =>
     cts.Cancel();
 };
 var agentFactory = services.GetRequiredService<IPreparationAgentFactory>();
+var preparationWorkflowService = services.GetRequiredService<IPreparationWorkflowService>();
 var chatClient = new AzureOpenAIClient(new Uri(runnerConfig.Endpoint!), new AzureKeyCredential(runnerConfig.ApiKey!));
 var openAIClient = new OpenAIClient(configuration["OpenAI:ApiKey"]);
 //.GetChatClient("gpt-4.1-mini")
 //.AsIChatClient();
 var kernel = Kernel.CreateBuilder().AddOpenAIChatCompletion("gpt-4.1-nano", openAIClient)/*.AddAzureOpenAIChatCompletion("gpt-4.1-nano", chatClient)*/.Build();
 var evalService = new EvalService(kernel);
-var runner = new DatasetEvalRunner(evalService, options, datasetRoot, agentFactory);
+var runner = new DatasetEvalRunner(evalService, options, datasetRoot, agentFactory, preparationWorkflowService);
 
 var report = await runner.RunAsync(cts.Token).ConfigureAwait(false);
 
@@ -123,8 +140,8 @@ internal sealed class RunnerOptions
     public string? OutputPath { get; set; }
     public int? MaxCasesPerAgent { get; set; } = 10;
     public int MaxConcurrency { get; set; } = Environment.ProcessorCount - 1;
-    public HashSet<string> AgentFilter { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public List<string> DatasetFiles { get; } = [];
+    public HashSet<string> AgentFilter { get; } = ["preparation-workflow-multi-agent", "preparation-workflow-single-agent"];
+    public List<string> DatasetFiles { get; } = [@".\AgentsLeagueReasoningAgents.Evals\Datasets\full-workflow\preparation-workflow.comparative.explain.jsonl"];
 
     public static RunnerOptions Parse(string[] args)
     {

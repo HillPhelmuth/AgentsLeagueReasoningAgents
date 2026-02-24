@@ -36,8 +36,4 @@
     <ProjectReference Include="..\AgentsLeagueReasoningAgents\AgentsLeagueReasoningAgents.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Datasets\SeedSessions\" />
-  </ItemGroup>
-
 </Project>

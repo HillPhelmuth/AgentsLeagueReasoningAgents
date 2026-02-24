@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Client;
 
-namespace AgentsLeagueReasoningAgents.Tools;
+namespace AgentsLeagueReasoningAgents.Tools.Required;
 
 public sealed class MicrosoftLearnMcpToolset(
     IOptions<MicrosoftLearnMcpOptions> options,

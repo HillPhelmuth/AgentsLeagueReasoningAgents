@@ -15,7 +15,7 @@ public sealed class LearningPathCurationOutput
     [Description("Supporting module recommendations to reinforce weak areas.")]
     public List<ModuleRecommendation> Modules { get; init; } = [];
 
-    [Description("Potential certifications or exams related to the selected topic area.")]
+    [Description("Potential certifications, applied skills or exams related to the selected topic area.")]
     public List<CertificationOrExamRecommendation> Targets { get; init; } = [];
 
     public string AsMarkdown()
@@ -96,6 +96,18 @@ public sealed class StudyPlanOutput
         }
         return builder.ToString();
     }
+    public StudyPlanEntity ToStudyPlanEntity(string userId)
+    {
+        return new StudyPlanEntity(userId, this);
+    }
+}
+
+public class StudyPlanEntity(string userId, StudyPlanOutput studyPlan)
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string UserId { get; set; } = userId;
+    public StudyPlanOutput StudyPlan { get; set; } = studyPlan;
 }
 
 public sealed class EngagementPlanOutput
@@ -181,7 +193,7 @@ public sealed class ModuleUnitRecommendation
 
 public sealed class CertificationOrExamRecommendation
 {
-    [Description("Exam or certification title.")]
+    [Description("Exam, applied skill or certification title.")]
     public string Title { get; init; } = string.Empty;
 
     [Description("Type such as Certification or Exam.")]

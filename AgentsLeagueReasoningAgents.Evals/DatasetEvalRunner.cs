@@ -14,7 +14,9 @@ namespace AgentsLeagueReasoningAgents.Evals;
 internal sealed class DatasetEvalRunner(
     EvalService evalService,
     RunnerOptions options,
-    string datasetRoot, IPreparationAgentFactory agentFactory)
+    string datasetRoot,
+    IPreparationAgentFactory agentFactory,
+    IPreparationWorkflowService preparationWorkflowService)
 {
     private static readonly string[] DefaultExplainEvals =
     [
@@ -82,7 +84,9 @@ internal sealed class DatasetEvalRunner(
         ["learning-path-curator"] = "Suggest the most relevant Microsoft Learn learning paths for the student's requested topics.",
         ["study-plan-generator"] = "Convert curated resources into a realistic week-by-week study plan.",
         ["engagement-agent"] = "Generate reminders and accountability nudges aligned to the study plan.",
-        ["readiness-assessment-agent"] = "Generate an assessment that evaluates readiness for the target certification exam."
+        ["readiness-assessment-agent"] = "Generate an assessment that evaluates readiness for the target certification exam.",
+        ["preparation-workflow-multi-agent"] = "Run full preparation workflow with specialized agents and produce complete curated path, study plan, and engagement outputs.",
+        ["preparation-workflow-single-agent"] = "Run full preparation workflow with one consolidated agent and produce complete curated path, study plan, and engagement outputs."
     };
 
     private static readonly JsonSerializerOptions WorkflowJsonOptions = new(JsonSerializerDefaults.Web)
@@ -369,6 +373,17 @@ internal sealed class DatasetEvalRunner(
         IPreparationAgentFactory factory,
         CancellationToken cancellationToken)
     {
+        if (item.AgentName.Equals("preparation-workflow-multi-agent", StringComparison.OrdinalIgnoreCase) ||
+            item.AgentName.Equals("preparation-workflow-single-agent", StringComparison.OrdinalIgnoreCase))
+        {
+            var request = BuildPreparationRequest(item);
+            var runSingleAgent =
+                item.AgentName.Equals("preparation-workflow-single-agent", StringComparison.OrdinalIgnoreCase) ||
+                item.WorkflowMode.Equals("single-agent", StringComparison.OrdinalIgnoreCase);
+
+            return await ExecutePreparationWorkflowAsync(item.Question, request, runSingleAgent, cancellationToken).ConfigureAwait(false);
+        }
+
         if (item.AgentName.Equals("learning-path-curator", StringComparison.OrdinalIgnoreCase))
         {
             var curator = await factory.CreateLearningPathCuratorAgentAsync(cancellationToken).ConfigureAwait(false);
@@ -376,28 +391,28 @@ internal sealed class DatasetEvalRunner(
             return new RuntimeAgentExecution(item.Question, response.ResponseText, response.AvailableTools, response.InvokedTools);
         }
 
-        var request = BuildPreparationRequest(item);
+        var preparationRequest = BuildPreparationRequest(item);
 
         var curatorForChain = await factory.CreateLearningPathCuratorAgentAsync(cancellationToken).ConfigureAwait(false);
-        var curationPrompt = BuildCurationPrompt(request);
+        var curationPrompt = BuildCurationPrompt(preparationRequest);
         var curation = await RunAgentWithPromptAsync(curatorForChain, curationPrompt, BuildRunOptions<LearningPathCurationOutput>(), cancellationToken).ConfigureAwait(false);
 
         if (item.AgentName.Equals("study-plan-generator", StringComparison.OrdinalIgnoreCase))
         {
             var planner = await factory.CreateStudyPlanGeneratorAgentAsync(cancellationToken).ConfigureAwait(false);
-            var planPrompt = BuildPlanPrompt(request, curation.ResponseText);
+            var planPrompt = BuildPlanPrompt(preparationRequest, curation.ResponseText);
             var plan = await RunAgentWithPromptAsync(planner, planPrompt, BuildRunOptions<StudyPlanOutput>(), cancellationToken).ConfigureAwait(false);
             return new RuntimeAgentExecution(planPrompt, plan.ResponseText, plan.AvailableTools, plan.InvokedTools);
         }
 
         var plannerForChain = await factory.CreateStudyPlanGeneratorAgentAsync(cancellationToken).ConfigureAwait(false);
-        var plannerPromptForChain = BuildPlanPrompt(request, curation.ResponseText);
+        var plannerPromptForChain = BuildPlanPrompt(preparationRequest, curation.ResponseText);
         var plannerForChainResponse = await RunAgentWithPromptAsync(plannerForChain, plannerPromptForChain, BuildRunOptions<StudyPlanOutput>(), cancellationToken).ConfigureAwait(false);
 
         if (item.AgentName.Equals("engagement-agent", StringComparison.OrdinalIgnoreCase))
         {
             var engagementAgent = await factory.CreateEngagementAgentAsync(cancellationToken).ConfigureAwait(false);
-            var engagementPrompt = BuildEngagementPrompt(request, plannerForChainResponse.ResponseText);
+            var engagementPrompt = BuildEngagementPrompt(preparationRequest, plannerForChainResponse.ResponseText);
             var engagement = await RunAgentWithPromptAsync(engagementAgent, engagementPrompt, BuildRunOptions<EngagementPlanOutput>(), cancellationToken).ConfigureAwait(false);
             return new RuntimeAgentExecution(engagementPrompt, engagement.ResponseText, engagement.AvailableTools, engagement.InvokedTools);
         }
@@ -405,7 +420,7 @@ internal sealed class DatasetEvalRunner(
         if (item.AgentName.Equals("readiness-assessment-agent", StringComparison.OrdinalIgnoreCase))
         {
             var engagementForChain = await factory.CreateEngagementAgentAsync(cancellationToken).ConfigureAwait(false);
-            var engagementPromptForChain = BuildEngagementPrompt(request, plannerForChainResponse.ResponseText);
+            var engagementPromptForChain = BuildEngagementPrompt(preparationRequest, plannerForChainResponse.ResponseText);
             var engagementForChainResponse = await RunAgentWithPromptAsync(engagementForChain, engagementPromptForChain, BuildRunOptions<EngagementPlanOutput>(), cancellationToken).ConfigureAwait(false);
 
             var preparationResult = new PreparationWorkflowResult(
@@ -414,11 +429,11 @@ internal sealed class DatasetEvalRunner(
                 DeserializeOrDefault<EngagementPlanOutput>(engagementForChainResponse.ResponseText),
                 "Runtime preparation chain generated for eval input context")
             {
-                StudentEmail = request.StudentEmail,
+                StudentEmail = preparationRequest.StudentEmail,
                 PreparationCompletedAtUtc = DateTimeOffset.UtcNow
             };
 
-            var assessmentPrompt = BuildAssessmentPrompt(preparationResult, request.StudentEmail);
+            var assessmentPrompt = BuildAssessmentPrompt(preparationResult, preparationRequest.StudentEmail);
             var assessmentAgent = await factory.CreateReadinessAssessmentAgentAsync(cancellationToken).ConfigureAwait(false);
             var assessment = await RunAgentWithPromptAsync(assessmentAgent, assessmentPrompt, BuildRunOptions<AssessmentQuestionSetOutput>(), cancellationToken).ConfigureAwait(false);
 
@@ -426,6 +441,53 @@ internal sealed class DatasetEvalRunner(
         }
 
         throw new InvalidOperationException($"Unsupported agent '{item.AgentName}'.");
+    }
+
+    private async Task<RuntimeAgentExecution> ExecutePreparationWorkflowAsync(
+        string question,
+        PreparationWorkflowRequest request,
+        bool runSingleAgent,
+        CancellationToken cancellationToken)
+    {
+        var invokedTools = new List<Dictionary<string, object>>();
+
+        void HandleToolInvocation(string agentName, string functionName, object parameters)
+        {
+            invokedTools.Add(new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["agent"] = agentName,
+                ["tool"] = functionName,
+                ["arguments"] = parameters
+            });
+        }
+
+        try
+        {
+            preparationWorkflowService.AgentToolInvoked += HandleToolInvocation;
+
+            PreparationWorkflowResult? result = runSingleAgent
+                ? await preparationWorkflowService.RunSingleAgentPreparationAsync(request, cancellationToken).ConfigureAwait(false)
+                : await preparationWorkflowService.RunPreparationAsync(request, cancellationToken).ConfigureAwait(false);
+
+            if (result is null)
+            {
+                throw new InvalidOperationException("Preparation workflow returned null output.");
+            }
+
+            var responseText = JsonSerializer.Serialize(result, WorkflowJsonOptions);
+            var availableTools = invokedTools
+                .Select(static tool => tool.TryGetValue("tool", out var value) ? Convert.ToString(value, CultureInfo.InvariantCulture) : null)
+                .Where(static value => !string.IsNullOrWhiteSpace(value))
+                .Cast<string>()
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            return new RuntimeAgentExecution(question, responseText, availableTools, invokedTools);
+        }
+        finally
+        {
+            preparationWorkflowService.AgentToolInvoked -= HandleToolInvocation;
+        }
     }
 
     private static PreparationWorkflowRequest BuildPreparationRequest(DatasetCase item)
@@ -783,7 +845,8 @@ internal sealed class DatasetEvalRunner(
                 Path.Combine(datasetRoot, "curator", "learning-path-curator.explain.jsonl"),
                 Path.Combine(datasetRoot, "planner", "study-plan-generator.explain.jsonl"),
                 Path.Combine(datasetRoot, "engagement", "engagement-agent.explain.jsonl"),
-                Path.Combine(datasetRoot, "assessment", "readiness-assessment-agent.explain.jsonl")
+                Path.Combine(datasetRoot, "assessment", "readiness-assessment-agent.explain.jsonl"),
+                Path.Combine(datasetRoot, "full-workflow", "preparation-workflow.comparative.explain.jsonl")
             ];
 
         var loaded = new List<DatasetCase>();
@@ -797,9 +860,15 @@ internal sealed class DatasetEvalRunner(
             //}
             var fileNameOnly = Path.GetFileName(path);
             var perAgentCount = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            foreach (var line in FileHelper.ExtractFromAssembly<string>(fileNameOnly).Split('\n', '\r').Skip(10))
+            foreach (var line in FileHelper.ExtractFromAssembly<string>(fileNameOnly).Split('\n', '\r'))
             {
                 if (string.IsNullOrWhiteSpace(line))
+                {
+                    continue;
+                }
+
+                var trimmed = line.TrimStart();
+                if (!trimmed.StartsWith('{'))
                 {
                     continue;
                 }

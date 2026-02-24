@@ -14,11 +14,12 @@ public sealed record PreparationWorkflowRequest(
     public string AsMarkdown()
     {
         return $"""
-                **Student email:** {StudentEmail}
-                **Student topics:** {Topics}
+                **User email:** {StudentEmail}
+                **Learn topics:** {Topics}
                 **Weekly study hours:** {WeeklyHours}
                 **Duration in weeks:** {DurationWeeks}
-
+                **Today's date (UTC):** {DateTimeOffset.UtcNow:d}
+               
                 Produce JSON only matching the provided schema
 
                 """;
