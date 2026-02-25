@@ -18,7 +18,7 @@ public partial class Home : IDisposable
     private sealed record ToolInvocationViewModel(
         string Agent,
         string ToolName,
-        string ParametersJson,
+        object ParametersJson,
         DateTimeOffset InvokedAtUtc);
 
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
@@ -116,7 +116,7 @@ public partial class Home : IDisposable
         ToolInvocations.Add(new ToolInvocationViewModel(
             agent,
             toolName,
-            serializedParameters,
+            parameters,
             DateTimeOffset.UtcNow));
 
         IsToolModalOpen = true;

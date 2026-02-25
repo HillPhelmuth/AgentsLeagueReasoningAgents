@@ -38,44 +38,74 @@
                 }
             </section>
 
-            <section class="message-thread">
-                @foreach (var message in Messages)
-                {
-                    <article class="message-card @(message.IsAssistant ? "assistant" : "student")">
-                        <strong>@(message.IsAssistant ? "Assessment Agent" : "You")</strong>
-                        <p>@message.Text</p>
-                    </article>
-                }
-            </section>
+            <section class="assessment-content">
+                <section class="active-column">
+                    @if (CurrentQuestion is not null && !Session.IsCompleted)
+                    {
+                        <section class="question-card">
+                            <h2>Question @(Session.CurrentQuestionIndex + 1) of @Session.TotalQuestions</h2>
+                            <p class="question-prompt">@CurrentQuestion.Prompt</p>
 
-            @if (CurrentQuestion is not null && !Session.IsCompleted)
-            {
-                <section class="question-card">
-                    <h2>Question @(Session.CurrentQuestionIndex + 1) of @Session.TotalQuestions</h2>
-                    <p class="question-prompt">@CurrentQuestion.Prompt</p>
+                            <div class="options-grid">
+                                @foreach (var option in CurrentQuestion.Options)
+                                {
+                                    <button class="option-button" @onclick="() => SelectOptionAsync(CurrentQuestion, option)" disabled="@IsSubmitting">
+                                        <strong>@option.OptionId.</strong> @option.Text
+                                    </button>
+                                }
+                            </div>
+                        </section>
+                    }
 
-                    <div class="options-grid">
-                        @foreach (var option in CurrentQuestion.Options)
+                    @if (Session.IsCompleted)
+                    {
+                        <section class="completion-card @(Session.IsReadyForExam ? "ready" : "needs-work")">
+                            <h2>Assessment Complete</h2>
+                            <p>@Session.Feedback</p>
+                            <p><strong>Score:</strong> @Session.CorrectAnswers / @Session.TotalQuestions (@Session.ScorePercentage%)</p>
+                        </section>
+
+                        <section class="actions-row">
+                            <button class="action-button secondary" @onclick="StartFreshAssessmentAsync" disabled="@IsSubmitting">Clear Results and Start Fresh</button>
+                            <button class="action-button primary" @onclick="BackToHome">Back to Preparation</button>
+                        </section>
+                    }
+                </section>
+
+                <aside class="history-column">
+                    <section class="history-card">
+                        <h2>Answered Questions</h2>
+
+                        @if (Session.SelectedAnswersByQuestionId.Count == 0)
                         {
-                            <button class="option-button" @onclick="() => SelectOptionAsync(CurrentQuestion, option)" disabled="@IsSubmitting">
-                                <strong>@option.OptionId.</strong> @option.Text
-                            </button>
+                            <p class="history-empty">When you answer a question, it will move here and the next question will stay on the left.</p>
                         }
-                    </div>
-                </section>
-            }
+                        else
+                        {
+                            var answeredQuestionNumber = 0;
+                            foreach (var question in Session.Questions)
+                            {
+                                if (!Session.SelectedAnswersByQuestionId.TryGetValue(question.QuestionId, out var selectedOptionId))
+                                {
+                                    continue;
+                                }
 
-            @if (Session.IsCompleted)
-            {
-                <section class="completion-card @(Session.IsReadyForExam ? "ready" : "needs-work")">
-                    <h2>Assessment Complete</h2>
-                    <p>@Session.Feedback</p>
-                    <p><strong>Score:</strong> @Session.CorrectAnswers / @Session.TotalQuestions (@Session.ScorePercentage%)</p>
-                </section>
+                                answeredQuestionNumber++;
+                                var selectedOption = question.Options.FirstOrDefault(option => string.Equals(option.OptionId, selectedOptionId, StringComparison.OrdinalIgnoreCase));
 
-                <button class="action-button secondary" @onclick="StartFreshAssessmentAsync" disabled="@IsSubmitting">Clear Results and Start Fresh</button>
-                <button class="action-button primary" @onclick="BackToHome">Back to Preparation</button>
-            }
+                                <article class="history-item">
+                                    <span class="history-index">Q@answeredQuestionNumber</span>
+                                    <p class="history-question">@question.Prompt</p>
+                                    <p class="history-answer">
+                                        <strong>Your answer:</strong>
+                                        @(selectedOption is null ? selectedOptionId : $"{selectedOption.OptionId}. {selectedOption.Text}")
+                                    </p>
+                                </article>
+                            }
+                        }
+                    </section>
+                </aside>
+            </section>
         }
     </section>
 </section>

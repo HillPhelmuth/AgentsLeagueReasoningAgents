@@ -262,7 +262,7 @@
       "agentName": "preparation-workflow-single-agent",
       "scenarioId": "FW-004",
       "thresholdProfile": "prep_default",
-      "compositeScore": 0,
+      "compositeScore": 5,
       "passed": true,
       "failureReason": null,
       "metrics": [
