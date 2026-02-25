@@ -1,14 +1,9 @@
-﻿using AgentsLeagueReasoningAgents.Evals;
-using AgentsLeagueReasoningAgents.Evals.CustomEvals;
-using AgentsLeagueReasoningAgents.Models;
+﻿using AgentsLeagueReasoningAgents.Models;
 using AgentsLeagueReasoningAgents.Services;
 using AgentsLeagueReasoningAgents.Workflows;
 using Markdig;
-using Microsoft.Agents.AI;
 using Microsoft.AspNetCore.Components;
 using MSLearnPlatformClient.Abstractions;
-using MSLearnPlatformClient.Models.Catalog;
-using MSLearnPlatformClient.Services;
 using System.Text.Json;
 
 namespace AgentsLeagueReasoningAgents.Demo.Components.Pages;

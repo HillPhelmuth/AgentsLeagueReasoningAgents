@@ -9,7 +9,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\AgentsLeagueReasoningAgents.Evals\AgentsLeagueReasoningAgents.Evals.csproj" />
 	  <ProjectReference Include="..\AgentsLeagueReasoningAgents\AgentsLeagueReasoningAgents.csproj" />
 	</ItemGroup>
 

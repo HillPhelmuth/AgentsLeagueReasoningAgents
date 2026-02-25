@@ -24,6 +24,8 @@ The solution supports a student prep flow for Microsoft certification exams:
 
 ## Architecture (high-level)
 
+![Reasoning Agents Architecture](./images/Very_Professional_Arch_Diagram.png)
+
 Core flow is orchestrated via `IPreparationWorkflowService` and `IAssessmentWorkflowService`:
 
 - `PreparationWorkflowService.RunPreparationAsync(...)` executes three agents sequentially:
@@ -33,6 +35,28 @@ Core flow is orchestrated via `IPreparationWorkflowService` and `IAssessmentWork
 - `AssessmentWorkflowService` starts and manages the readiness assessment session.
 
 Agent creation and tool wiring live in `PreparationAgentFactory`.
+
+## Demo screenshots
+
+### Start page
+
+![Start page](./images/Start.png)
+
+### Tool details
+
+![Tool details](./images/ToolDetails.png)
+
+### Tool modal
+
+![Tool modal](./images/ToolModal.png)
+
+### Output example
+
+![Output example](./images/OutputExample.png)
+
+### Assessment agent
+
+![Assessment agent](./images/AssessmentAgent.png)
 
 ## In-scope tool integrations
 
@@ -59,6 +83,21 @@ Implementation notes:
 - Creates a singleton `McpClient` via `HttpClientTransport`.
 - Calls `ListToolsAsync()` and returns them to agent toolsets.
 - Endpoint/name are configured via `MicrosoftLearnMcpOptions`.
+
+## Optional tool integrations
+
+The project also includes optional enrichment toolsets in `AgentsLeagueReasoningAgents/Tools/Optional`:
+
+- [`ExamTopicsToolset`](./AgentsLeagueReasoningAgents/Tools/Optional/ExamTopicsToolset.cs) – checks community-maintained free certification offers and voucher promotions.
+- [`GitHubAnkiDeckToolset`](./AgentsLeagueReasoningAgents/Tools/Optional/GitHubAnkiDeckToolset.cs) – extracts flashcards from open-source Anki decks for exam prep.
+- [`GitHubCommunityHubToolset`](./AgentsLeagueReasoningAgents/Tools/Optional/GitHubCommunityHubToolset.cs) – pulls curated community resources (courses, labs, practice tests, videos, study guides).
+- [`GitHubExamSyllabiToolset`](./AgentsLeagueReasoningAgents/Tools/Optional/GitHubExamSyllabiToolset.cs) – returns structured exam syllabus/topic weights from a community JSON source (with freshness warning).
+- [`GitHubPracticeQuestionsToolset`](./AgentsLeagueReasoningAgents/Tools/Optional/GitHubPracticeQuestionsToolset.cs) – searches community-maintained practice question banks for selected exams.
+- [`GitHubStudyNotesToolset`](./AgentsLeagueReasoningAgents/Tools/Optional/GitHubStudyNotesToolset.cs) – retrieves structured study notes from mapped GitHub repositories.
+- [`OfficialLabExercisesToolset`](./AgentsLeagueReasoningAgents/Tools/Optional/OfficialLabExercisesToolset.cs) – loads official MIT-licensed MicrosoftLearning lab instructions.
+- [`PodcastFeedToolset`](./AgentsLeagueReasoningAgents/Tools/Optional/PodcastFeedToolset.cs) – searches Microsoft-focused podcast episodes relevant to exam topics.
+- [`StackExchangeToolset`](./AgentsLeagueReasoningAgents/Tools/Optional/StackExchangeToolset.cs) – searches Stack Overflow Q&A for exam-related technical topics.
+- [`YouTubeStudyContentToolset`](./AgentsLeagueReasoningAgents/Tools/Optional/YouTubeStudyContentToolset.cs) – searches curated YouTube study videos and can optionally include transcripts.
 
 ## Prerequisites
 
