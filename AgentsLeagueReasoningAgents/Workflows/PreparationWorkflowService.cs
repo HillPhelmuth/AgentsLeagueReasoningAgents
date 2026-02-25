@@ -20,18 +20,32 @@ public interface IPreparationWorkflowService
     event Action<string, string, object>? AgentToolInvoked;
 }
 
-public sealed class PreparationWorkflowService(
-    IPreparationAgentFactory agentFactory,
-    ILoggerFactory loggerFactory,
-    IPreparationAssessmentStateStore stateStore, ILearnCatalogClient learnCatalogClient,
-    ReminderRepository reminderRepository,
-    ReminderService reminderService) : IPreparationWorkflowService
+public sealed class PreparationWorkflowService : IPreparationWorkflowService, IDisposable
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNameCaseInsensitive = true
     };
-    private ILogger<PreparationWorkflowService> _logger = loggerFactory.CreateLogger<PreparationWorkflowService>();
+    private ILogger<PreparationWorkflowService> _logger;
+    private readonly IPreparationAgentFactory _agentFactory;
+    private readonly IPreparationAssessmentStateStore _stateStore;
+    private readonly ReminderRepository _reminderRepository;
+    private readonly ReminderService _reminderService;
+
+    public PreparationWorkflowService(IPreparationAgentFactory agentFactory,
+        ILoggerFactory loggerFactory,
+        IPreparationAssessmentStateStore stateStore, ILearnCatalogClient learnCatalogClient,
+        ReminderRepository reminderRepository,
+        ReminderService reminderService)
+    {
+        _agentFactory = agentFactory;
+        _stateStore = stateStore;
+        _reminderRepository = reminderRepository;
+        _reminderService = reminderService;
+        _logger = loggerFactory.CreateLogger<PreparationWorkflowService>();
+        _agentFactory.AgentInvokedTool += HandleAgentInvokedTool;
+    }
+
     public event Action<string, object>? AgentResponseEmitted;
     public event Action<string, string, object>? AgentToolInvoked;
 
@@ -41,12 +55,12 @@ public sealed class PreparationWorkflowService(
     // the AgentWorkflowBuilder and InProcessExecution for better orchestration and potential parallelism.
     public async Task<PreparationWorkflowResult> RunPreparationAsync(PreparationWorkflowRequest request, CancellationToken cancellationToken = default)
     {
-        agentFactory.AgentInvokedTool += HandleAgentInvokedTool;
-        var curator = await agentFactory.CreateLearningPathCuratorAgentAsync(cancellationToken).ConfigureAwait(false);
+        
+        var curator = await _agentFactory.CreateLearningPathCuratorAgentAsync(cancellationToken).ConfigureAwait(false);
 
-        var planner = await agentFactory.CreateStudyPlanGeneratorAgentAsync(cancellationToken).ConfigureAwait(false);
+        var planner = await _agentFactory.CreateStudyPlanGeneratorAgentAsync(cancellationToken).ConfigureAwait(false);
 
-        var engagement = await agentFactory.CreateEngagementAgentAsync(cancellationToken).ConfigureAwait(false);
+        var engagement = await _agentFactory.CreateEngagementAgentAsync(cancellationToken).ConfigureAwait(false);
 
         var curationPrompt = $"""
 
@@ -68,31 +82,9 @@ public sealed class PreparationWorkflowService(
         var curatedLearningPath = (await curator.RunAsync(curationPrompt, curatorSession, options: curatedPromptOptions, cancellationToken: cancellationToken).ConfigureAwait(false)).Text ?? string.Empty;
 
         var curatorserialized = await curator.SerializeSessionAsync(curatorSession);
-#if DEBUG
-        var outputPath = Path.Combine(_seedOutputDir, $"{curator.Name}", $"session_{Guid.NewGuid()}.json");
 
-#endif
         var curatedStructured = DeserializeOrDefault<LearningPathCurationOutput>(curatedLearningPath);
-        //if (curatedStructured?.Modules != null)
-        //{
-        //    List<string> moduleUnitsRequested = [];
-        //    foreach (var module in curatedStructured.Modules)
-        //    {
-        //        var moduleModuleUnitIds = module.ModuleUnitIds;
-        //        // Remove duplicates and already requested unit ids
-        //        moduleModuleUnitIds = moduleModuleUnitIds.Except(moduleUnitsRequested).ToList();
-
-        //        moduleUnitsRequested.AddRange(moduleModuleUnitIds);
-        //        var unitRecords = await learnCatalogClient.GetCatalogItemsAsync(CatalogItemType.Unit, moduleModuleUnitIds, cancellationToken);
-        //        module.ModuleUnits = unitRecords.Units.Select(unit => new ModuleUnitRecommendation()
-        //        {
-        //            Id = unit.Uid ?? "",
-        //            Title = unit.Title ?? "",
-        //            Url = unit.Url ?? "",
-        //            DurationInMinutes = unit.DurationInMinutes.GetValueOrDefault()
-        //        }).ToList();
-        //    }
-        //}
+       
         var curatedJson = SerializeFromObject(curatedStructured);
         string SerializeFromObject(object obj)
         {
@@ -120,11 +112,7 @@ public sealed class PreparationWorkflowService(
         var plannerSession = await planner.CreateSessionAsync();
         var studyPlan = (await planner.RunAsync(planPrompt, plannerSession, options: planPromptOptions, cancellationToken: cancellationToken)).Text;
         var plannerSerialized = await planner.SerializeSessionAsync(plannerSession);
-#if DEBUG
-        //outputPath = Path.Combine(SeedOutputDir, $"{planner.Name}", $"session_{Guid.NewGuid()}.json");
-        //Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-        //await File.WriteAllTextAsync(Path.Combine(outputPath), JsonSerializer.Serialize(plannerSerialized), cancellationToken);
-#endif
+
         var studyPlanStructured = DeserializeOrDefault<StudyPlanOutput>(studyPlan) ?? new StudyPlanOutput();
         AgentResponseEmitted?.Invoke(planner.Name, studyPlanStructured);
         var engagementPrompt = $"""
@@ -146,11 +134,7 @@ public sealed class PreparationWorkflowService(
         var engageSession = await engagement.CreateSessionAsync();
         var engagementPlan = (await engagement.RunAsync(engagementPrompt, engageSession, options: engagementPromptOptions, cancellationToken: cancellationToken).ConfigureAwait(false)).Text;
         var engagementSerialized = await engagement.SerializeSessionAsync(engageSession);
-#if DEBUG
-        //outputPath = Path.Combine(SeedOutputDir, $"{engagement.Name}", $"session_{Guid.NewGuid()}.json");
-        //Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-        //await File.WriteAllTextAsync(Path.Combine(outputPath), JsonSerializer.Serialize(engagementSerialized), cancellationToken);
-#endif
+
         var engagementStructured = DeserializeOrDefault<EngagementPlanOutput>(engagementPlan) ?? new EngagementPlanOutput();
         AgentResponseEmitted?.Invoke(engagement.Name, engagementStructured);
 
@@ -178,8 +162,8 @@ public sealed class PreparationWorkflowService(
             PreparationCompletedAtUtc = DateTimeOffset.UtcNow
         };
 
-        await stateStore.SavePreparationStateAsync(request.StudentEmail, result, cancellationToken).ConfigureAwait(false);
-        agentFactory.AgentInvokedTool -= HandleAgentInvokedTool;
+        await _stateStore.SavePreparationStateAsync(request.StudentEmail, result, cancellationToken).ConfigureAwait(false);
+        
         return result;
     }
 
@@ -190,8 +174,7 @@ public sealed class PreparationWorkflowService(
 
     public async Task<PreparationWorkflowResult?> RunSingleAgentPreparationAsync(PreparationWorkflowRequest request, CancellationToken cancellationToken = default)
     {
-        agentFactory.AgentInvokedTool += HandleAgentInvokedTool;
-        var agent = await agentFactory.CreateFullWorkflowAgentAsync(cancellationToken);
+        var agent = await _agentFactory.CreateFullWorkflowAgentAsync(cancellationToken);
         var input = $"""
 
              Learning topics: {request.Topics}
@@ -217,10 +200,9 @@ public sealed class PreparationWorkflowService(
         {
             AgentResponseEmitted?.Invoke(agent.Name, parsedResponse);
             await PersistAndScheduleEngagementAsync(request.StudentEmail, parsedResponse.EngagementPlanStructured, cancellationToken).ConfigureAwait(false);
-            await stateStore.SavePreparationStateAsync(request.StudentEmail, parsedResponse, cancellationToken).ConfigureAwait(false);
+            await _stateStore.SavePreparationStateAsync(request.StudentEmail, parsedResponse, cancellationToken).ConfigureAwait(false);
         }
 
-        agentFactory.AgentInvokedTool -= HandleAgentInvokedTool;
         return parsedResponse;
 
     }
@@ -243,9 +225,9 @@ public sealed class PreparationWorkflowService(
     }
     public async Task<PreparationWorkflowResult> RunPreparationWithWorkflowAsync(PreparationWorkflowRequest request, CancellationToken cancellationToken = default)
     {
-        var curator = await agentFactory.CreateLearningPathCuratorAgentAsync(cancellationToken).ConfigureAwait(false);
-        var planner = await agentFactory.CreateStudyPlanGeneratorAgentAsync(cancellationToken).ConfigureAwait(false);
-        var engagement = await agentFactory.CreateEngagementAgentAsync(cancellationToken).ConfigureAwait(false);
+        var curator = await _agentFactory.CreateLearningPathCuratorAgentAsync(cancellationToken).ConfigureAwait(false);
+        var planner = await _agentFactory.CreateStudyPlanGeneratorAgentAsync(cancellationToken).ConfigureAwait(false);
+        var engagement = await _agentFactory.CreateEngagementAgentAsync(cancellationToken).ConfigureAwait(false);
         var workflow = AgentWorkflowBuilder.BuildSequential(curator, planner, engagement);
 
         await using var run = await InProcessExecution.StreamAsync(workflow, request.AsMarkdown(), cancellationToken: cancellationToken);
@@ -290,7 +272,7 @@ public sealed class PreparationWorkflowService(
 
         await PersistAndScheduleEngagementAsync(request.StudentEmail, engagementPlanStructured, cancellationToken).ConfigureAwait(false);
 
-        await stateStore.SavePreparationStateAsync(request.StudentEmail, result, cancellationToken).ConfigureAwait(false);
+        await _stateStore.SavePreparationStateAsync(request.StudentEmail, result, cancellationToken).ConfigureAwait(false);
         return result;
     }
 
@@ -312,9 +294,9 @@ public sealed class PreparationWorkflowService(
         {
             reminder.ScheduleUtc = NormalizeToUtc(reminder.ScheduleUtc);
 
-            await reminderRepository.UpsertReminderAsync(reminder, cancellationToken).ConfigureAwait(false);
+            await _reminderRepository.UpsertReminderAsync(reminder, cancellationToken).ConfigureAwait(false);
 
-            var sequenceNumber = await reminderService
+            var sequenceNumber = await _reminderService
                 .ScheduleReminderAsync(
                     reminder.Id,
                     reminder.UserId,
@@ -322,7 +304,7 @@ public sealed class PreparationWorkflowService(
                     cancellationToken)
                 .ConfigureAwait(false);
 
-            await reminderRepository.MarkScheduledAsync(reminder.UserId, reminder.Id, sequenceNumber, cancellationToken).ConfigureAwait(false);
+            await _reminderRepository.MarkScheduledAsync(reminder.UserId, reminder.Id, sequenceNumber, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Scheduled reminder {ReminderId} for {RecipientEmail} at {ScheduleUtc}",
                 reminder.Id,
@@ -339,5 +321,10 @@ public sealed class PreparationWorkflowService(
             DateTimeKind.Local => dateTime.ToUniversalTime(),
             _ => DateTime.SpecifyKind(dateTime, DateTimeKind.Utc)
         };
+    }
+
+    public void Dispose()
+    {
+        _agentFactory.AgentInvokedTool -= HandleAgentInvokedTool;
     }
 }

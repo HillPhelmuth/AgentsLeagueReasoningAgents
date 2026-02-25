@@ -87,7 +87,7 @@ public static class ServiceCollectionExtensions
         });
         services.AddSingleton<ReminderRepository>();
 
-        services.AddSingleton<IPreparationAssessmentStateStore, PreparationAssessmentStateStore>();
+        services.AddScoped<IPreparationAssessmentStateStore, PreparationAssessmentStateStore>();
         services.AddSingleton<IPreparationAgentFactory, PreparationAgentFactory>();
         services.AddScoped<IPreparationWorkflowService, PreparationWorkflowService>();
         services.AddScoped<IAssessmentWorkflowService, AssessmentWorkflowService>();

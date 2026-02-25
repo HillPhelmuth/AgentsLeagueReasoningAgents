@@ -186,7 +186,7 @@ public sealed class PreparationAgentFactory(
             context.CallContent?.Name,
             context.CallContent?.CallId,
             context.CallContent?.Arguments);
-
+        AgentInvokedTool?.Invoke(agent.Name ?? "agent not known", context.CallContent?.Name ?? "function not known", context.CallContent?.Arguments ?? (object)"no args");
         var result = await next(context, cancellationToken).ConfigureAwait(false);
 
         logger.LogInformation(
