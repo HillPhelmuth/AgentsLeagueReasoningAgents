@@ -1,5 +1,5 @@
-﻿using System.Text.Json;
-using AgentsLeagueReasoningAgents.Evals;
+﻿using AgentsLeagueReasoningAgents.Evals;
+using AgentsLeagueReasoningAgents.Evals.CustomEvals;
 using AgentsLeagueReasoningAgents.Models;
 using AgentsLeagueReasoningAgents.Services;
 using AgentsLeagueReasoningAgents.Workflows;
@@ -9,11 +9,18 @@ using Microsoft.AspNetCore.Components;
 using MSLearnPlatformClient.Abstractions;
 using MSLearnPlatformClient.Models.Catalog;
 using MSLearnPlatformClient.Services;
+using System.Text.Json;
 
 namespace AgentsLeagueReasoningAgents.Demo.Components.Pages;
 
 public partial class Home : IDisposable
 {
+    private sealed record ToolInvocationViewModel(
+        string Agent,
+        string ToolName,
+        string ParametersJson,
+        DateTimeOffset InvokedAtUtc);
+
     [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private IPreparationAssessmentStateStore StateStore { get; set; } = default!;
 
@@ -23,33 +30,25 @@ public partial class Home : IDisposable
     private int DurationWeeks { get; set; } = 8;
     private bool UseSingleAgent { get; set; }
     private bool IsRunning { get; set; }
+    private bool IsToolModalOpen { get; set; }
     private string? ErrorMessage { get; set; }
     private PreparationWorkflowResult? Result { get; set; }
+    private List<ToolInvocationViewModel> ToolInvocations { get; } = [];
     [Inject] private ILearnCatalogClient LearnCatalogClient { get; set; } = default!;
     protected override Task OnInitializedAsync()
     {
         PreparationWorkflowService.AgentResponseEmitted += HandleAgentResponseEmitted;
+        PreparationWorkflowService.AgentToolInvoked += HandleAgentToolInvoked;
         return base.OnInitializedAsync();
     }
 
     private string? tempString;
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            //learn-bizapps.power-pages-administration,learn-bizapps.power-pages-integration,learn-bizapps.power-pages-authentication-user-management,learn-bizapps.power-pages-maintenance-troubleshooting,learn.wwl.introduction-to-devops,learn-bizapps.application-lifecycle-management-architect,learn-bizapps.introduction-solutions,learn.wwl.introduction-to-github-actions
-            //var idstring =
-            //    "learn-bizapps.ai-builder-grounded-prompts";
-            //var ids = idstring.Split(',').Select(s => s.Trim()).ToArray();
-            //var response = await LearnCatalogClient.GetCatalogItemAsync(CatalogItemType.Module, ids[0]);
-
-        }
-        await base.OnAfterRenderAsync(firstRender);
-    }
+    
 
     public void Dispose()
     {
         PreparationWorkflowService.AgentResponseEmitted -= HandleAgentResponseEmitted;
+        PreparationWorkflowService.AgentToolInvoked -= HandleAgentToolInvoked;
     }
 
     private void HandleAgentResponseEmitted(string agent, object responseContent)
@@ -82,6 +81,8 @@ public partial class Home : IDisposable
         IsRunning = true;
         ErrorMessage = null;
         Result = null;
+        ToolInvocations.Clear();
+        IsToolModalOpen = false;
 
         try
         {
@@ -103,6 +104,33 @@ public partial class Home : IDisposable
         {
             IsRunning = false;
         }
+    }
+
+    private void HandleAgentToolInvoked(string agent, string toolName, object parameters)
+    {
+        var serializedParameters = JsonSerializer.Serialize(parameters, new JsonSerializerOptions
+        {
+            WriteIndented = true
+        });
+
+        ToolInvocations.Add(new ToolInvocationViewModel(
+            agent,
+            toolName,
+            serializedParameters,
+            DateTimeOffset.UtcNow));
+
+        IsToolModalOpen = true;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OpenToolModal()
+    {
+        IsToolModalOpen = true;
+    }
+
+    private void CloseToolModal()
+    {
+        IsToolModalOpen = false;
     }
 
     private async Task LoadSavedPreparationAsync()

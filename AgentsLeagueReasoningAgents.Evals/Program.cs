@@ -138,8 +138,9 @@ internal sealed class RunnerOptions
 {
     public string DatasetRoot { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "source", "repos", "AgentsLeagueReasoningAgents", "AgentsLeagueReasoningAgents.Evals", "Datasets");
     public string? OutputPath { get; set; }
-    public int? MaxCasesPerAgent { get; set; } = 10;
+    public int? MaxCasesPerAgent { get; set; } = 20;
     public int MaxConcurrency { get; set; } = Environment.ProcessorCount - 1;
+    public bool QuickWorkflowCustomEvalOnly { get; set; }
     public HashSet<string> AgentFilter { get; } = ["preparation-workflow-multi-agent", "preparation-workflow-single-agent"];
     public List<string> DatasetFiles { get; } = [@".\AgentsLeagueReasoningAgents.Evals\Datasets\full-workflow\preparation-workflow.comparative.explain.jsonl"];
 
@@ -192,6 +193,13 @@ internal sealed class RunnerOptions
             if (arg.Equals("--dataset-file", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
             {
                 options.DatasetFiles.Add(args[++i]);
+                continue;
+            }
+
+            if (arg.Equals("--quick-custom-eval", StringComparison.OrdinalIgnoreCase) ||
+                arg.Equals("--quick-eval", StringComparison.OrdinalIgnoreCase))
+            {
+                options.QuickWorkflowCustomEvalOnly = true;
             }
         }
 

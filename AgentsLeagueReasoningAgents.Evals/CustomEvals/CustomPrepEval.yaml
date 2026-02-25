@@ -1,0 +1,56 @@
+name: CustomPrepEval
+description: Measures how well an agent provides a curated learning path, a comprehensive study plan, and an effective study scheule with reminders for MS Learn certification preparation.
+execution_settings:
+  default:
+    max_tokens: 128
+    temperature: 0.1
+    top_p: 0.1
+    presence_penalty: 0
+    frequency_penalty: 0
+input_variables:
+- name: details
+  description: the information provided by the user.
+  default: ''
+- name: learningPath
+  description: The curated learning path provided by the agent. 
+  default: ''
+- name: studyPlan
+  description: The comprehensive study plan provided by the agent.
+  default: ''
+- name: studySchedule
+  description: The effective study schedule with reminders provided by the agent.
+  default: ''
+template: |
+
+  Evaluate how effectively an agent provides a curated learning path, a comprehensive study plan, and an engagement plan with reminders for Microsoft Learn certification preparation. Analyze the agent's output in detail before assigning scores. 
+
+  Persist in breaking down your internal evaluation into detailed, step-by-step reasoning for each sub-area (Learning Path, Study Plan, Engagement Plan), noting strengths and weaknesses before assigning individual and overall scores. Chain your thoughts: analyze the output in detail before arriving at any conclusions or assigning scores. Only after the reasoning, provide positive and negative examples from the evaluated output to justify your scoring. Finally, assign all scores as the very last step.
+
+  Output Format:
+  Return the evaluation in the EXACT JSON schema provided. All fields are required.
+  - "Reasoning": Narrative, step-by-step reasoning and analysis of the provided learning path, study plan, and engagement/reminder plan. Do not include scores or examples here.
+  - "Examples": Cite directly from the agent's output. Separate positive and negative justifications. Use clear quotation marks or context. Relate each example to the relevant area (e.g., learning path, study plan, engagement plan). 
+  - "LearningPathScore", "StudyPlanScore", "EngagementPlanScore", "score": Integers from 1 (poor) to 5 (excellent).
+
+  Example Evaluation (for demonstration—the agent output is implied as [OUTPUT]):
+
+  {
+  "Reasoning": "First, I examined the learning path—while it included relevant MS Learn modules, it lacked a logical order and didn't mention prerequisites. Next, I reviewed the study plan: it provided milestones but the schedule was too generic, offering little daily specificity. Engagement planning was weak; reminders were mentioned vaguely without actionable steps.",
+  "Examples": "Positive: 'The path begins with foundational modules, then advances to specialty content.' Negative: 'Set reminders when you think you need them.'",
+  "LearningPathScore": 3,
+  "StudyPlanScore": 2,
+  "EngagementPlanScore": 2,
+  "score": 2
+  }
+
+  (When giving actual evaluations, make each section fully developed and use specific, sourced phrases or summaries from the output.)
+
+  Important: Always provide detailed reasoning first, then examples, then scores. Follow the input JSON schema exactly.
+
+  User Input: {{$details}}
+
+  Learning Path: {{$learningPath}}
+
+  Study Plan: {{$studyPlan}}
+
+  Study Engagement Schedule: {{$studySchedule}}

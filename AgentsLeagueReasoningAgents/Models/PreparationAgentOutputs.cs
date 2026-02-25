@@ -234,9 +234,19 @@ public sealed class DailyStudySession
 
 public sealed class ReminderMessage
 {
-    [Description("When to send the reminder in the schedule.")]
-    public DateTime Schedule { get; init; }
+    [Description(ScheduleDescription)]
+    [JsonIgnore]
+    public DateTime Schedule => DateTime.TryParse(ScheduleTime, out var value) ? value : DateTime.Now.AddDays(2);
 
+    [Description(ScheduleDescription)]
+    public string ScheduleTime { get; set; }
+
+    private const string ScheduleDescription = """
+                                               When to send the reminder in the schedule.
+                                               Output a JSON string in ISO 8601 / RFC 3339 date-time format with an explicit offset.
+                                               Must include either `Z` (UTC) or an offset like `-06:00` / `+01:00`. Use 24-hour time. No natural language. No slashes. No Unix timestamps. When unsure, output UTC with `Z`.
+                                               Examples: `"2026-02-24T17:04:05Z"`, `"2026-02-24T11:04:05-06:00"`, `"2026-02-24T17:04:05.123+00:00"`.
+                                               """;
     [Description("Reminder subject line.")]
     public string Subject { get; init; } = string.Empty;
 
@@ -244,11 +254,12 @@ public sealed class ReminderMessage
     public string Body { get; init; } = string.Empty;
     public ReminderEntity ToReminderEntity(string userId)
     {
+        var scheduleTime = DateTime.TryParse(ScheduleTime, out var parsedTime) ? parsedTime : DateTime.UtcNow;
         return new ReminderEntity
         {
             UserId = userId,
             RecipientEmail = userId,
-            ScheduleUtc = Schedule,
+            ScheduleUtc = scheduleTime,
             Subject = Subject,
             Body = Body,
             Status = "Pending",
@@ -259,18 +270,29 @@ public sealed class ReminderMessage
 
 public sealed class MotivationMessage
 {
-    [Description("Suggested send time for the motivational note.")]
-    public DateTime Schedule { get; init; }
+    [Description(ScheduleDescription)]
+    [JsonIgnore]
+    public DateTime Schedule => DateTime.TryParse(ScheduleTime, out var value) ? value : DateTime.Now.AddDays(2);
+
+    [Description(ScheduleDescription)] 
+    public string ScheduleTime { get; set; } = "";
+    private const string ScheduleDescription = """
+                                               When to send the reminder in the schedule.
+                                               Output a JSON string in ISO 8601 / RFC 3339 date-time format with an explicit offset.
+                                               Must include either `Z` (UTC) or an offset like `-06:00` / `+01:00`. Use 24-hour time. No natural language. No slashes. No Unix timestamps. When unsure, output UTC with `Z`.
+                                               Examples: `"2026-02-24T17:04:05Z"`, `"2026-02-24T11:04:05-06:00"`, `"2026-02-24T17:04:05.123+00:00"`.
+                                               """;
 
     [Description("Motivational message content.")]
     public string Body { get; init; } = string.Empty;
     public ReminderEntity ToReminderEntity(string userId)
     {
+        var scheduleTime = DateTime.TryParse(ScheduleTime, out var parsedTime) ? parsedTime : DateTime.UtcNow;
         return new ReminderEntity
         {
             UserId = userId,
             RecipientEmail = userId,
-            ScheduleUtc = Schedule,
+            ScheduleUtc = scheduleTime,
             Subject = "Motivation: " + Body[..Math.Min(50, Body.Length)] + "...",
             Body = Body,
             Status = "Pending",

@@ -44,6 +44,7 @@
 		<div class="action-row">
 			<button class="action-button primary" @onclick="RunWorkflowAsync" disabled="@IsRunning">@(IsRunning ? "Running Workflow..." : "Run Preparation Workflow")</button>
 			<button class="action-button secondary" @onclick="LoadSavedPreparationAsync" disabled="@IsRunning">Load Saved Preparation</button>
+			<button class="action-button secondary" @onclick="OpenToolModal" disabled="@(ToolInvocations.Count == 0)">View Invoked Tools (@ToolInvocations.Count)</button>
 		</div>
 	</section>
 
@@ -85,3 +86,32 @@
 		</section>
 	}
 </section>
+
+@if (IsToolModalOpen)
+{
+	<div class="tools-modal-backdrop" @onclick="CloseToolModal">
+		<div class="tools-modal" @onclick:stopPropagation="true">
+			<div class="tools-modal-header">
+				<h3>Invoked Tools</h3>
+				<button class="tools-modal-close" @onclick="CloseToolModal" aria-label="Close tools modal">×</button>
+			</div>
+
+			<div class="tools-modal-content">
+				@if (ToolInvocations.Count == 0)
+				{
+					<p class="tools-empty">No tools invoked yet.</p>
+				}
+				else
+				{
+					@foreach (var tool in ToolInvocations)
+					{
+						<details class="result-card tool-item">
+							<summary>@tool.Agent → @tool.ToolName (@tool.InvokedAtUtc:HH:mm:ss) UTC</summary>
+							<json-viewer data="@tool.ParametersJson"></json-viewer>
+						</details>
+					}
+				}
+			</div>
+		</div>
+	</div>
+}

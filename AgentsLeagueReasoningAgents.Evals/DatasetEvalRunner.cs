@@ -1,7 +1,9 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using AgentsLeagueReasoningAgents.Agents;
+using AgentsLeagueReasoningAgents.Evals.CustomEvals;
 using AgentsLeagueReasoningAgents.Models;
 using AgentsLeagueReasoningAgents.Workflows;
 using HillPhelmuth.SemanticKernel.LlmAsJudgeEvals;
@@ -18,16 +20,20 @@ internal sealed class DatasetEvalRunner(
     IPreparationAgentFactory agentFactory,
     IPreparationWorkflowService preparationWorkflowService)
 {
+    private const string ComparativeWorkflowDatasetFileName = "preparation-workflow.comparative.explain.jsonl";
+
+    private static readonly HashSet<string> WorkflowComparativeAgents = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "preparation-workflow-multi-agent",
+        "preparation-workflow-single-agent"
+    };
+
     private static readonly string[] DefaultExplainEvals =
     [
         "IntentResolutionExplain",
-        //"ToolCallAccuracyExplain",
         "TaskAdherenceExplain",
         "RelevanceExplain",
         "CoherenceExplain",
-        //"PerceivedIntelligenceExplain",
-        //"FluencyExplain",
-        //"EmpathyExplain",
         "HelpfulnessExplain"
     ];
 
@@ -35,12 +41,8 @@ internal sealed class DatasetEvalRunner(
     {
         ["RelevanceExplain"] = 3.6,
         ["CoherenceExplain"] = 3.6,
-        ["PerceivedIntelligenceExplain"] = 3.5,
-        ["FluencyExplain"] = 3.7,
-        ["EmpathyExplain"] = 3.2,
         ["HelpfulnessExplain"] = 3.7,
         ["IntentResolutionExplain"] = 3.6,
-        ["ToolCallAccuracyExplain"] = 3.5,
         ["TaskAdherenceExplain"] = 3.7
     };
 
@@ -48,35 +50,26 @@ internal sealed class DatasetEvalRunner(
     {
         ["prep_default"] = new WeightedProfile(3.65, new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
         {
-            ["TaskAdherenceExplain"] = 0.20,
-            ["IntentResolutionExplain"] = 0.15,
-            ["ToolCallAccuracyExplain"] = 0.10,
+            ["TaskAdherenceExplain"] = 0.40,
+            ["IntentResolutionExplain"] = 0.30,
             ["RelevanceExplain"] = 0.15,
-            ["CoherenceExplain"] = 0.10,
-            ["PerceivedIntelligenceExplain"] = 0.10,
-            ["FluencyExplain"] = 0.10,
-            ["EmpathyExplain"] = 0.05,
-            ["HelpfulnessExplain"] = 0.05
+            ["CoherenceExplain"] = 0.05,
+            ["HelpfulnessExplain"] = 0.10
         }),
         ["assessment_strict"] = new WeightedProfile(3.70, new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
         {
-            ["TaskAdherenceExplain"] = 0.22,
-            ["IntentResolutionExplain"] = 0.13,
-            ["ToolCallAccuracyExplain"] = 0.12,
-            ["RelevanceExplain"] = 0.14,
-            ["CoherenceExplain"] = 0.10,
-            ["PerceivedIntelligenceExplain"] = 0.12,
-            ["FluencyExplain"] = 0.08,
-            ["EmpathyExplain"] = 0.03,
-            ["HelpfulnessExplain"] = 0.06
+            ["TaskAdherenceExplain"] = 0.40,
+            ["IntentResolutionExplain"] = 0.40,
+            ["RelevanceExplain"] = 0.10,
+            ["CoherenceExplain"] = 0.05,
+            ["HelpfulnessExplain"] = 0.05
         })
     };
 
     private static readonly HashSet<string> HardFailMetrics = new(StringComparer.OrdinalIgnoreCase)
     {
         "TaskAdherenceExplain",
-        "IntentResolutionExplain",
-        "ToolCallAccuracyExplain"
+        "IntentResolutionExplain"
     };
 
     private static readonly Dictionary<string, string> AgentGoals = new(StringComparer.OrdinalIgnoreCase)
@@ -104,22 +97,38 @@ internal sealed class DatasetEvalRunner(
 
         Console.WriteLine($"Loaded {allCases.Count} dataset cases.");
         Console.WriteLine($"Metric max concurrency: {options.MaxConcurrency}");
-
-        var caseResults = new List<CaseEvaluationResult>(allCases.Count);
-        var index = 0;
-        foreach (var item in allCases)
+        if (options.QuickWorkflowCustomEvalOnly)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            index++;
+            Console.WriteLine("Quick mode enabled: workflow comparative cases run only CustomPrepEval.");
+        }
 
-            Console.WriteLine($"[{index}/{allCases.Count}] Evaluating {item.CaseId} ({item.AgentName})...");
+        var caseResults = new ConcurrentBag<CaseEvaluationResult>();
+        var index = 0;
+        var parallelOptions = new ParallelOptions
+        {
+            CancellationToken = cancellationToken,
+            MaxDegreeOfParallelism = 3
+        };
+
+        await Parallel.ForEachAsync(allCases, parallelOptions, async (item, ct) =>
+        {
+            ct.ThrowIfCancellationRequested();
+            var currentIndex = Interlocked.Increment(ref index);
+            Console.WriteLine($"[{currentIndex}/{allCases.Count}] Evaluating {item.CaseId} ({item.AgentName})...");
 
             try
             {
-                var runtimeExplainInputs = await GenerateExplainInputsAsync(item, agentFactory, cancellationToken).ConfigureAwait(false);
+                if (options.QuickWorkflowCustomEvalOnly && IsWorkflowComparativeQuickCase(item))
+                {
+                    var quickResult = await ExecuteQuickWorkflowCustomEvalCaseAsync(item, ct).ConfigureAwait(false);
+                    caseResults.Add(quickResult);
+                    return;
+                }
+
+                var runtimeExplainInputs = await GenerateExplainInputsAsync(item, agentFactory, ct).ConfigureAwait(false);
 
                 IReadOnlyList<string> metricNames = item.RequiredEvals.Count > 0 ? item.RequiredEvals : DefaultExplainEvals;
-                var metrics = await ExecuteMetricsAsync(item, metricNames, runtimeExplainInputs, cancellationToken).ConfigureAwait(false);
+                var metrics = await ExecuteMetricsAsync(item, metricNames, runtimeExplainInputs, ct).ConfigureAwait(false);
 
                 var profileName = string.IsNullOrWhiteSpace(item.ThresholdProfile) ? "prep_default" : item.ThresholdProfile;
                 var profile = Profiles.TryGetValue(profileName, out var weightedProfile)
@@ -158,13 +167,71 @@ internal sealed class DatasetEvalRunner(
                     ThresholdProfile = profileName,
                     CompositeScore = 0,
                     Passed = false,
-                    FailureReason = ex.Message,
+                    FailureReason = ex.ToString(),
                     Metrics = []
                 });
             }
+        }).ConfigureAwait(false);
+
+        return BuildReport(caseResults.ToList());
+    }
+
+    private static bool IsWorkflowComparativeQuickCase(DatasetCase item)
+    {
+        return WorkflowComparativeAgents.Contains(item.AgentName) &&
+               item.SourceDatasetFile.Equals(ComparativeWorkflowDatasetFileName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task<CaseEvaluationResult> ExecuteQuickWorkflowCustomEvalCaseAsync(DatasetCase item, CancellationToken cancellationToken)
+    {
+        var request = BuildPreparationRequest(item);
+        var runSingleAgent =
+            item.AgentName.Equals("preparation-workflow-single-agent", StringComparison.OrdinalIgnoreCase) ||
+            item.WorkflowMode.Equals("single-agent", StringComparison.OrdinalIgnoreCase);
+
+        var workflowResult = runSingleAgent
+            ? await preparationWorkflowService.RunSingleAgentPreparationAsync(request, cancellationToken).ConfigureAwait(false)
+            : await preparationWorkflowService.RunPreparationAsync(request, cancellationToken).ConfigureAwait(false);
+
+        if (workflowResult is null)
+        {
+            throw new InvalidOperationException("Preparation workflow returned null output.");
         }
 
-        return BuildReport(caseResults);
+        var quickEvalRunner = new QuickEvalRunner(evalService);
+        ResultScore evalResult = await quickEvalRunner.ExecuteCustomEval(request, workflowResult).ConfigureAwait(false);
+        var metricScore = evalResult.Score;
+        var profileName = string.IsNullOrWhiteSpace(item.ThresholdProfile) ? "prep_default" : item.ThresholdProfile;
+        var passThreshold = Profiles.TryGetValue(profileName, out var profile)
+            ? profile.PassComposite
+            : Profiles["prep_default"].PassComposite;
+
+        var passed = metricScore >= passThreshold;
+        var failureReason = passed
+            ? null
+            : $"CustomPrepEval={metricScore.ToString("0.00", CultureInfo.InvariantCulture)} (<{passThreshold.ToString("0.00", CultureInfo.InvariantCulture)})";
+
+        var metric = new MetricEvaluationResult
+        {
+            MetricName = "CustomPrepEval",
+            EvalName = evalResult.EvalName,
+            Score = metricScore,
+            ProbScore = evalResult.ProbScore,
+            Reasoning = evalResult.Reasoning,
+            ChainOfThought = evalResult.ChainOfThought
+        };
+
+        return new CaseEvaluationResult
+        {
+            CaseId = item.CaseId,
+            AgentName = item.AgentName,
+            ScenarioId = item.ScenarioId,
+            ThresholdProfile = profileName,
+            CompositeScore = metricScore,
+            Passed = passed,
+            FailureReason = failureReason,
+            Metrics = [metric]
+        };
     }
 
     private async Task<List<MetricEvaluationResult>> ExecuteMetricsAsync(
@@ -313,53 +380,29 @@ internal sealed class DatasetEvalRunner(
 
         return new Dictionary<string, Dictionary<string, object>>(StringComparer.OrdinalIgnoreCase)
         {
-            ["RelevanceExplain"] = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+            ["RelevanceExplain"] = new(StringComparer.OrdinalIgnoreCase)
             {
                 ["input"] = responseText,
                 ["question"] = runtimeExecution.Question,
                 ["context"] = context
             },
-            ["CoherenceExplain"] = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+            ["CoherenceExplain"] = new(StringComparer.OrdinalIgnoreCase)
             {
                 ["input"] = responseText,
                 ["question"] = runtimeExecution.Question
             },
-            ["PerceivedIntelligenceExplain"] = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["input"] = responseText,
-                ["question"] = runtimeExecution.Question,
-                ["context"] = context,
-                ["rag_mode"] = "non-rag"
-            },
-            ["FluencyExplain"] = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+            ["HelpfulnessExplain"] = new(StringComparer.OrdinalIgnoreCase)
             {
                 ["input"] = responseText,
                 ["question"] = runtimeExecution.Question
             },
-            ["EmpathyExplain"] = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["input"] = responseText,
-                ["question"] = runtimeExecution.Question
-            },
-            ["HelpfulnessExplain"] = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["input"] = responseText,
-                ["question"] = runtimeExecution.Question
-            },
-            ["IntentResolutionExplain"] = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+            ["IntentResolutionExplain"] = new(StringComparer.OrdinalIgnoreCase)
             {
                 ["input"] = responseText,
                 ["question"] = runtimeExecution.Question,
                 ["relevantContext"] = context
             },
-            ["ToolCallAccuracyExplain"] = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["input"] = responseText,
-                ["question"] = runtimeExecution.Question,
-                ["availableTools"] = runtimeExecution.AvailableTools,
-                ["invokedTools"] = runtimeExecution.InvokedTools
-            },
-            ["TaskAdherenceExplain"] = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+            ["TaskAdherenceExplain"] = new(StringComparer.OrdinalIgnoreCase)
             {
                 ["input"] = responseText,
                 ["question"] = runtimeExecution.Question,
@@ -548,15 +591,7 @@ internal sealed class DatasetEvalRunner(
 
     private static string BuildCurationPrompt(PreparationWorkflowRequest request)
     {
-        return $"""
-
-                Student topics: {request.Topics}
-                Weekly study hours: {request.WeeklyHours}
-                Duration in weeks: {request.DurationWeeks}
-
-                Produce JSON only matching the provided schema
-
-                """;
+        return request.AsMarkdown();
     }
 
     private static string BuildPlanPrompt(PreparationWorkflowRequest request, string curatedLearningPath)
@@ -878,6 +913,8 @@ internal sealed class DatasetEvalRunner(
                 {
                     continue;
                 }
+
+                item.SourceDatasetFile = fileNameOnly;
 
                 if (options.AgentFilter.Count > 0 && !options.AgentFilter.Contains(item.AgentName))
                 {

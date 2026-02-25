@@ -47,13 +47,15 @@ public sealed class LearnCatalogToolset(ILearnCatalogClient learnCatalogClient, 
             AIFunctionFactory.Create(SearchLearningPathsAsync),
             AIFunctionFactory.Create(SearchModulesAsync),
             AIFunctionFactory.Create(SearchCertificationsAndExamsAsync),
-                AIFunctionFactory.Create(GetModulesAsync)
+            AIFunctionFactory.Create(GetModulesAsync),
+            AIFunctionFactory.Create(GetLearningPathDetailsAsync)
+
         ];
 
         return Task.FromResult(tools);
     }
 
-    [Description("Find Microsoft Learn learning paths relevant to one or more certification/applied skills topics.")]
+    [Description("Find Microsoft Learn learning paths relevant to one or more certification/applied skills topics. se ONLY when you have no specific modules to get from `GetLearningPathDetails`")]
     public async Task<string> SearchLearningPathsAsync(
         [Description("MS learn certification subjects. include all that apply. If you're unsure, add it.")] LearnSubject[] subjects,
         [Description("Applicable job roles for the subject matter. Include *ALL* that may apply. If you're unsure, include it")] Role[] jobRoles,
@@ -81,6 +83,23 @@ public sealed class LearnCatalogToolset(ILearnCatalogClient learnCatalogClient, 
                      """;
         var filterResponse = await filterAgent.RunAsync(input, cancellationToken: cancellationToken);
         return filterResponse.Text;
+    }
+    [Description("Get detailed information about specific learning paths, including the modules that are part of the learning path. Use the learningPath IDs from `SearchCertificationsAndExams` to get the details, including module ids, for those learning paths.")]
+    public async Task<string> GetLearningPathDetailsAsync(
+        [Description("The learning path IDs extracted from `SearchCertificationsAndExams`")] string[] learningPathIds,
+        CancellationToken cancellationToken = default)
+    {
+        List<LearningPathRecord> learningPaths = [];
+        foreach (var id in learningPathIds)
+        {
+            var response = await learnCatalogClient.GetCatalogItemAsync(CatalogItemType.LearningPath, id, cancellationToken).ConfigureAwait(false);
+            if (response is not null)
+            {
+                learningPaths.AddRange(response.LearningPaths);
+            }
+        }
+        var learningPathsJson = JsonSerializer.Serialize(learningPaths, SerializerOptions);
+        return learningPathsJson;
     }
     [Description("Get the specific MS Learn modules extracted from previous `LearningPath` Searches.")]
     public async Task<string> GetModulesAsync([Description("The module IDs extracted from `modules` property")] string[] moduleIds, CancellationToken cancellationToken = default)
@@ -141,7 +160,7 @@ public sealed class LearnCatalogToolset(ILearnCatalogClient learnCatalogClient, 
         return JsonSerializer.Serialize(filtered, SerializerOptions);
     }
     
-    [Description("Find relevant certifications and exams in Microsoft Learn catalog for a target area.")]
+    [Description("Find relevant certifications, applied skills and exams in Microsoft Learn catalog for a target area.")]
     public async Task<string> SearchCertificationsAndExamsAsync(
         [Description("MS learn certification subjects. Include *ALL* that may apply. If you're unsure, include it")] LearnSubject[] subjects,
         [Description("Applicable job roles for the subject matter. Include *ALL* that may apply. If you're unsure, include it")] Role[] jobRoles,
@@ -158,7 +177,7 @@ public sealed class LearnCatalogToolset(ILearnCatalogClient learnCatalogClient, 
         };
 
         var response = await learnCatalogClient.QueryCatalogAsync(catalogQuery, cancellationToken).ConfigureAwait(false);
-        var filterAgent = CreateFilterAgent<ExamAndCertResponse>(CatalogItemType.Certification, CatalogItemType.Exam);
+        var filterAgent = CreateFilterAgent<ExamAndCertResponse>(CatalogItemType.Certification, CatalogItemType.Exam, CatalogItemType.AppliedSkill);
         var batchSize = Math.Clamp(maxResults, 1, 50);
         var certificationCount = response.Certifications.Count;
         var examCount = response.Exams.Count;

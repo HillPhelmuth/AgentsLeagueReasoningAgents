@@ -66,6 +66,7 @@ dotnet run --project .\AgentsLeagueReasoningAgents.Evals\AgentsLeagueReasoningAg
 - `--max-concurrency <n>` run up to `n` metric evaluations in parallel per case (default: `1`)
 - `--agent <name>` filter by agent (repeatable)
 - `--dataset-file <path>` evaluate only specific JSONL file (repeatable)
+- `--quick-custom-eval` (or `--quick-eval`) run only `CustomPrepEval` for workflow agents in `full-workflow/preparation-workflow.comparative.explain.jsonl`
 
 ### Comparative full-workflow evals
 
@@ -93,6 +94,9 @@ dotnet run --project .\AgentsLeagueReasoningAgents.Evals\AgentsLeagueReasoningAg
 
 # Faster run with parallel metric execution
 dotnet run --project .\AgentsLeagueReasoningAgents.Evals\AgentsLeagueReasoningAgents.Evals.csproj -- --max-concurrency 4
+
+# Quick custom eval for full workflow comparison only
+dotnet run --project .\AgentsLeagueReasoningAgents.Evals\AgentsLeagueReasoningAgents.Evals.csproj -- --dataset-file .\AgentsLeagueReasoningAgents.Evals\Datasets\full-workflow\preparation-workflow.comparative.explain.jsonl --quick-custom-eval
 ```
 
 ## Output

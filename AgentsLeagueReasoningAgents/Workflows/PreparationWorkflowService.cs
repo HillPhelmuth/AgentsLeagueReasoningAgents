@@ -73,26 +73,26 @@ public sealed class PreparationWorkflowService(
 
 #endif
         var curatedStructured = DeserializeOrDefault<LearningPathCurationOutput>(curatedLearningPath);
-        if (curatedStructured?.Modules != null)
-        {
-            List<string> moduleUnitsRequested = [];
-            foreach (var module in curatedStructured.Modules)
-            {
-                var moduleModuleUnitIds = module.ModuleUnitIds;
-                // Remove duplicates and already requested unit ids
-                moduleModuleUnitIds = moduleModuleUnitIds.Except(moduleUnitsRequested).ToList();
+        //if (curatedStructured?.Modules != null)
+        //{
+        //    List<string> moduleUnitsRequested = [];
+        //    foreach (var module in curatedStructured.Modules)
+        //    {
+        //        var moduleModuleUnitIds = module.ModuleUnitIds;
+        //        // Remove duplicates and already requested unit ids
+        //        moduleModuleUnitIds = moduleModuleUnitIds.Except(moduleUnitsRequested).ToList();
 
-                moduleUnitsRequested.AddRange(moduleModuleUnitIds);
-                var unitRecords = await learnCatalogClient.GetCatalogItemsAsync(CatalogItemType.Unit, moduleModuleUnitIds, cancellationToken);
-                module.ModuleUnits = unitRecords.Units.Select(unit => new ModuleUnitRecommendation()
-                {
-                    Id = unit.Uid ?? "",
-                    Title = unit.Title ?? "",
-                    Url = unit.Url ?? "",
-                    DurationInMinutes = unit.DurationInMinutes.GetValueOrDefault()
-                }).ToList();
-            }
-        }
+        //        moduleUnitsRequested.AddRange(moduleModuleUnitIds);
+        //        var unitRecords = await learnCatalogClient.GetCatalogItemsAsync(CatalogItemType.Unit, moduleModuleUnitIds, cancellationToken);
+        //        module.ModuleUnits = unitRecords.Units.Select(unit => new ModuleUnitRecommendation()
+        //        {
+        //            Id = unit.Uid ?? "",
+        //            Title = unit.Title ?? "",
+        //            Url = unit.Url ?? "",
+        //            DurationInMinutes = unit.DurationInMinutes.GetValueOrDefault()
+        //        }).ToList();
+        //    }
+        //}
         var curatedJson = SerializeFromObject(curatedStructured);
         string SerializeFromObject(object obj)
         {
@@ -125,7 +125,7 @@ public sealed class PreparationWorkflowService(
         //Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
         //await File.WriteAllTextAsync(Path.Combine(outputPath), JsonSerializer.Serialize(plannerSerialized), cancellationToken);
 #endif
-        var studyPlanStructured = DeserializeOrDefault<StudyPlanOutput>(studyPlan);
+        var studyPlanStructured = DeserializeOrDefault<StudyPlanOutput>(studyPlan) ?? new StudyPlanOutput();
         AgentResponseEmitted?.Invoke(planner.Name, studyPlanStructured);
         var engagementPrompt = $"""
 
@@ -151,7 +151,7 @@ public sealed class PreparationWorkflowService(
         //Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
         //await File.WriteAllTextAsync(Path.Combine(outputPath), JsonSerializer.Serialize(engagementSerialized), cancellationToken);
 #endif
-        var engagementStructured = DeserializeOrDefault<EngagementPlanOutput>(engagementPlan);
+        var engagementStructured = DeserializeOrDefault<EngagementPlanOutput>(engagementPlan) ?? new EngagementPlanOutput();
         AgentResponseEmitted?.Invoke(engagement.Name, engagementStructured);
 
         await PersistAndScheduleEngagementAsync(request.StudentEmail, engagementStructured, cancellationToken).ConfigureAwait(false);

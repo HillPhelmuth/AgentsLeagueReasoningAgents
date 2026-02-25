@@ -26,4 +26,7 @@ public sealed class DatasetCase
 
     [JsonPropertyName("explain_inputs")]
     public Dictionary<string, Dictionary<string,object>> ExplainInputs { get; init; } = new(StringComparer.OrdinalIgnoreCase);
+
+    [JsonIgnore]
+    public string SourceDatasetFile { get; set; } = string.Empty;
 }

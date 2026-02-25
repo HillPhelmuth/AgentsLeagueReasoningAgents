@@ -13,6 +13,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="CustomEvals\CustomPrepEval.yaml" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="appsettings.Development.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
@@ -26,7 +30,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="HillPhelmuth.SemanticKernel.LlmAsJudgeEvals" Version="1.2.0" />
+    <EmbeddedResource Include="CustomEvals\CustomPrepEval.yaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="HillPhelmuth.SemanticKernel.LlmAsJudgeEvals" Version="1.2.1" />
     <PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.0.0-rc1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.3" />
     <PackageReference Include="System.Memory.Data" Version="10.0.3" />
