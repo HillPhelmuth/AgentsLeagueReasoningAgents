@@ -39,12 +39,14 @@
                             @foreach (var entry in day.Entries)
                             {
                                 <li>
-                                    <p><strong>@entry.TimeLabel</strong> · @entry.Kind</p>
-                                    @if (!string.IsNullOrWhiteSpace(entry.Subject))
-                                    {
+                                    <details>
+                                        <summary><strong>@entry.TimeLabel</strong> · @entry.Kind</summary>
+                                        @if (!string.IsNullOrWhiteSpace(entry.Subject))
+                                        {
                                         <p>@entry.Subject</p>
-                                    }
-                                    <p>@entry.Body</p>
+                                        }
+                                        <p>@entry.Body</p>
+                                    </details>
                                 </li>
                             }
                         </ul>

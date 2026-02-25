@@ -112,11 +112,11 @@ public partial class Home : IDisposable
         {
             WriteIndented = true
         });
-
+        var paramsobject = JsonSerializer.Deserialize<object>(serializedParameters);
         ToolInvocations.Add(new ToolInvocationViewModel(
             agent,
             toolName,
-            parameters,
+            paramsobject,
             DateTimeOffset.UtcNow));
 
         IsToolModalOpen = true;

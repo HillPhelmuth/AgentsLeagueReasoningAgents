@@ -158,7 +158,7 @@ public sealed class PreparationAgentFactory(
             .GetChatClient(deployment).AsIChatClient();
         else
         {
-            chatClient = new OpenAIClient(configuration["OpenAI:ApiKey"]).GetChatClient("gpt-4.1-mini").AsIChatClient();
+            chatClient = new OpenAIClient(configuration["OpenAI:ApiKey"]).GetChatClient("gpt-4.1").AsIChatClient();
         }
 
         var wrappedClient = chatClient;
