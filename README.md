@@ -149,6 +149,8 @@ Evaluated using a dataset-driven runner (`AgentsLeagueReasoningAgents.Evals`) wi
 
 ---
 
+
+
 ## Demo screenshots
 
 ### Start page
@@ -170,3 +172,25 @@ Evaluated using a dataset-driven runner (`AgentsLeagueReasoningAgents.Evals`) wi
 ### Assessment agent
 
 ![Assessment agent](./images/AssessmentAgent.png)
+
+## Running locally
+
+```powershell
+dotnet restore
+dotnet run --project .\AgentsLeagueReasoningAgents.Demo\AgentsLeagueReasoningAgents.Demo.csproj
+```
+
+Set the following user secrets in `AgentsLeagueReasoningAgents.Demo`:
+
+```json
+{
+  "AzureOpenAI:ApiKey": "<api-key>",
+  "AzureOpenAI:DeploymentName": "gpt-4.1 (or similar)",
+  "AzureOpenAI:Endpoint": "<azure OpenAI or AI Foundry Endpoint>",
+  "ConnectionStrings:ReminderDb": "<cosmos-db-connection-string>"
+}
+```
+
+Open the local URL, enter topics/email/hours/weeks on `/`, run the preparation workflow, then navigate to `/assessment` when ready.
+
+---

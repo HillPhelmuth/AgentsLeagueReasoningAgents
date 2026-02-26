@@ -11,8 +11,8 @@ public class EmailDispatchService
 
     public EmailDispatchService(IConfiguration configuration)
     {
-        var connectionString = configuration["COMMUNICATION_SERVICES_CONNECTION_STRING"]
-            ?? throw new InvalidOperationException("Missing COMMUNICATION_SERVICES_CONNECTION_STRING setting.");
+        var connectionString = configuration["CommunicationServices:ConnectionString"]
+            ?? throw new InvalidOperationException("Missing CommunicationServices:ConnectionString setting.");
 
         _senderAddress = configuration["EMAIL_SENDER"]
             ?? throw new InvalidOperationException("Missing EMAIL_SENDER setting.");

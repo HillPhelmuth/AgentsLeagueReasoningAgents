@@ -3,12 +3,16 @@ using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using AgentsLeagueReasoningAgents.Agents;
+using Azure;
+using Azure.AI.OpenAI;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using MSLearnPlatformClient.Abstractions;
 using MSLearnPlatformClient.Models.Catalog;
 using OpenAI;
+using OpenAI.Chat;
+using ChatResponseFormat = Microsoft.Extensions.AI.ChatResponseFormat;
 
 namespace AgentsLeagueReasoningAgents.Tools.Required;
 
@@ -21,7 +25,14 @@ public sealed class LearnCatalogToolset(ILearnCatalogClient learnCatalogClient, 
 
     private AIAgent CreateFilterAgent<TOutput>(params CatalogItemType[] itemTypes)
     {
-        var client = new OpenAIClient(new ApiKeyCredential(configuration["OpenRouter:ApiKey"]), new OpenAIClientOptions() { Endpoint = new Uri("https://openrouter.ai/api/v1") }).GetChatClient("gpt-oss-120b:nitro");
+        ChatClient client;
+        if (configuration["AzureOpenAI:UseOnlyOpenAI"] == "True")
+            client = new OpenAIClient(new ApiKeyCredential(configuration["OpenRouter:ApiKey"]), new OpenAIClientOptions() { Endpoint = new Uri("https://openrouter.ai/api/v1") }).GetChatClient("gpt-oss-120b:nitro");
+        else
+        {
+            client = new AzureOpenAIClient(new Uri(configuration["AzureOpenAI:Endpoint"]), new ApiKeyCredential(configuration["AzureOpenAI:ApiKey"]))
+                .GetChatClient("gpt-oss-120b");
+        }
         var instructions = $"""
                             Filter the following list of Microsoft Learn catalog items to those most relevant to the specified query. Only consider items of the following types: {string.Join(", ", itemTypes)}. 
                             You will be provided with a json array of catalog items, and a user query. Each catalog item will have a title, description, and associated metadata such as subjects and roles.
@@ -159,7 +170,7 @@ public sealed class LearnCatalogToolset(ILearnCatalogClient learnCatalogClient, 
         };
         return JsonSerializer.Serialize(filtered, SerializerOptions);
     }
-    
+
     [Description("Find relevant certifications, applied skills and exams in Microsoft Learn catalog for a target area.")]
     public async Task<string> SearchCertificationsAndExamsAsync(
         [Description("MS learn certification subjects. Include *ALL* that may apply. If you're unsure, include it")] LearnSubject[] subjects,

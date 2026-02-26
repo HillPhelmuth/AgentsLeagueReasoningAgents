@@ -16,7 +16,7 @@ public class EmailService
     public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
     {
         _logger = logger;
-        var connectionString = configuration["COMMUNICATION_SERVICES_CONNECTION_STRING"];
+        var connectionString = configuration["CommunicationServices:ConnectionString"];
         _senderAddress = configuration["EMAIL_SENDER"] ?? string.Empty;
 
         _emailClient = new EmailClient(connectionString);
