@@ -19,6 +19,15 @@
 	min-height: 100dvh;
 }
 
+.floating-home-button {
+	position: fixed;
+	top: 1rem;
+	left: 1rem;
+	z-index: 100;
+	padding: 0.5rem 0.85rem;
+	font-size: 0.82rem;
+}
+
 .assessment-shell {
 	max-width: 1200px;
 	margin: 0 auto;

@@ -4,10 +4,14 @@
 graph LR
   %% === Applications ===
   User[Student / Operator]
-  Demo[AgentsLeagueReasoningAgents.Demo\nBlazor Server UI]
-  Core[AgentsLeagueReasoningAgents\nCore Agents + Workflows + Services]
-  Evals[AgentsLeagueReasoningAgents.Evals\nDataset Evaluation Runner]
-  EmailFn[AgentsLeagueReasoningAgents.EmailFunction\nAzure Functions Email Sender]
+  Demo[AgentsLeagueReasoningAgents.Demo
+  Blazor Server UI]
+  Core[AgentsLeagueReasoningAgents
+  Core Agents + Workflows + Services]
+  Evals[AgentsLeagueReasoningAgents.Evals
+  Dataset Evaluation Runner]
+  EmailFn[AgentsLeagueReasoningAgents.EmailFunction
+  Azure Functions Email Sender]
 
   %% === Core internals ===
   PrepWF[PreparationWorkflowService]
@@ -20,7 +24,7 @@ graph LR
   ExamPlan[Exam Plan Agent]
 
   %% === Shared client/library ===
-  LearnClient[MSLearnPlatformClient\nILearnCatalogClient]
+  LearnClient[MSLearnPlatformClient]
 
   %% === Data & messaging ===
   StateStore[(Preparation/Assessment State Store)]
@@ -29,7 +33,7 @@ graph LR
 
   %% === External services ===
   AzureOpenAI[Azure OpenAI]
-  LearnMCP[Microsoft Learn MCP\nhttps://learn.microsoft.com/api/mcp]
+  LearnMCP[Microsoft Learn MCP / https://learn.microsoft.com/api/mcp]
   LearnCatalog[Microsoft Learn Catalog APIs]
   ACSEmail[Azure Communication Services Email]
 
